@@ -28,5 +28,24 @@ jobs:
         with:
           python-version: "3.14"
       - run: python -m pip install -r requirements-ha-test.txt
+      - name: "Install the frontend version required by the tested Home Assistant"
+        run: |
+          python - <<'PY'
+          from importlib.resources import files
+          import json
+          import subprocess
+          import sys
+
+          manifest = json.loads(
+              files("homeassistant").joinpath("components", "frontend", "manifest.json").read_text()
+          )
+          requirements = [
+              item for item in manifest["requirements"]
+              if item.startswith("home-assistant-frontend==")
+          ]
+          assert len(requirements) == 1, "Expected one exact HA frontend requirement"
+          print("Installing HA's declared frontend requirement:", requirements[0], flush=True)
+          subprocess.run([sys.executable, "-m", "pip", "install", *requirements], check=True)
+          PY
       - run: python -c "from homeassistant.const import __version__; print(__version__)"
       - run: pytest tests/ha -v
