@@ -34,10 +34,11 @@ permission to publish any separate Android code, private snapshots or live data.
 
 ## Remaining verification and catalog gates
 
-- [ ] Complete and record automated native HA tests on the minimum and current
-      supported versions in an isolated environment. Explicit official-package
-      matrix targets are 2026.11.0 and 2026.11.3; mark this complete only after
-      both exact-version jobs and dependency checks pass.
+- [x] Run the existing ten native HA tests on the minimum and current stable
+      versions in isolated runners. Official-package targets 2026.11.0 and
+      2026.11.3 each passed all ten cases, exact-version assertions and `pip check`
+      in [run 45292640042](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45292640042).
+      This does not complete the broader lifecycle/clean-install checklist.
 - [ ] Complete isolated clean-install, browser, restart/offline and physical
       Android acceptance; distinguish these from the accepted owner deployment.
 - [ ] Review auth boundaries, storage validation, unload/reload and record deletion.
@@ -45,8 +46,9 @@ permission to publish any separate Android code, private snapshots or live data.
 - [ ] Run Home Assistant hassfest and the appropriate HACS/Marketplace validator.
 - [x] Initial beta CI passed on the published commit, but its native tests ran
       on HA 2026.10.4. Do not treat that as minimum/current-version validation.
-- [ ] Confirm the official-package minimum/current matrix passes on its pushed
-      follow-up commit, then update beta notes with links to those results.
+- [x] Confirm the official-package minimum/current matrix passes on pushed
+      follow-up commit `9a8046b`; record the results in validation evidence.
+      The beta notes link that follow-up evidence without moving the release tag.
 - [ ] Submit to the catalog only after the required checks pass and submission is
       separately approved. A public repository alone does not create a listing.
 

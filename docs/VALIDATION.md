@@ -82,17 +82,29 @@ by the retired third-party test plugin. That result is real but does not validat
 the declared 2026.11 minimum. The maintainer directs projects to the official
 package; the workflow no longer relies on that older plugin.
 
-Consult the matrix workflow for the specific commit: adding targets is not a
-passing result, and queued/failed jobs must not be described as passed. Native
-tests remain distinct from the 92 dependency-free tests and the owner's live
-acceptance. The new targets' results are reported after both complete; release
-notes are updated only after both pass. The beta's published tag and artifacts
-remain unchanged.
+The [first exact-version matrix run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45292640042)
+passed on commit `9a8046b7196467a5c24c10efbf0fa15fe5e5985f`:
+
+| Target | Installed HA / official test package | Native results | Dependency check |
+| --- | --- | --- | --- |
+| Declared minimum | 2026.11.0 / 2026.11.0 | 10 passed | Passed |
+| Current stable at matrix review | 2026.11.3 / 2026.11.3 | 10 passed | Passed |
+
+The same run passed all 92 dependency-free Python and 31 Node tests. The native
+cases are the same ten tests exercised on two versions, not twenty distinct
+test scenarios. Warnings remain visible in the logs; no tests were skipped or
+assertions weakened to obtain these results.
+
+The follow-up commit changes only CI configuration, test requirements, pytest
+bootstrap settings and documentation. Runtime files are identical to the
+published beta. Its tag and downloadable artifacts remain unchanged; the release
+notes link the new matrix evidence rather than implying the old tag's original
+workflow tested these versions.
 
 Still required for catalog submission and stronger compatibility claims:
 
-- Native automated results on the declared minimum and current supported HA
-  versions, not just whichever version the test plugin selects.
+- Continue running native tests on the declared minimum and an explicitly
+  reviewed current stable version; advance the current target as releases change.
 - Isolated clean installation without legacy resources, full lifecycle and
   restart/offline recovery, multi-entry leases and end-to-end entity permissions.
 - Physical-device coverage beyond the owner's accepted Android workflow.
