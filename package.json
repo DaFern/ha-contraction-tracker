@@ -1,0 +1,9 @@
+{
+  "name": "ha-contraction-tracker",
+  "version": "0.5.0-beta.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/frontend/*.test.mjs"
+  }
+}

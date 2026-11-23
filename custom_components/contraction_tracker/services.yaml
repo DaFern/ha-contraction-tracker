@@ -1,0 +1,166 @@
+import_legacy:
+  name: "Preview or apply a legacy tracker import"
+  description: "Admin-only. Preview by default. Apply requires both preview hashes, stopped source and an unused destination with native phone notifications disabled."
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    source_records:
+      required: true
+      selector:
+        entity:
+          domain: todo
+    source_state:
+      required: true
+      selector:
+        entity:
+          domain: input_text
+    source_movement:
+      required: true
+      selector:
+        entity:
+          domain: input_text
+    source_guidance:
+      required: true
+      selector:
+        entity:
+          domain: input_text
+    source_automation:
+      required: true
+      selector:
+        entity:
+          domain: automation
+    apply:
+      default: false
+      selector:
+        boolean:
+    expected_source:
+      description: "Exact source_sha256 from the reviewed preview."
+      selector:
+        text:
+    expected_target:
+      description: "Exact target_sha256 from the reviewed preview."
+      selector:
+        text:
+command:
+  name: "Tracker command"
+  description: "Control one tracker. State-changing controls require its current revision token."
+  fields:
+    entry_id:
+      name: "Tracker entry"
+      required: true
+      selector:
+        text:
+    command:
+      name: "Command"
+      required: true
+      selector:
+        select:
+          options:
+            - "show"
+            - "start"
+            - "stop"
+            - "Mild"
+            - "Moderate"
+            - "Strong"
+            - "end"
+            - "notify"
+            - "movement"
+            - "reminders_on"
+            - "reminders_off"
+            - "intensity"
+    token:
+      name: "Current revision token"
+      description: "Use current.k for contraction controls, or current.movement.k for movement/reminder controls."
+      selector:
+        text:
+configure_guidance:
+  name: "Configure contact prompts"
+  description: "Select location manually and use your maternity team's contact interval. Never infers labour stage."
+  fields:
+    mode:
+      default: "manual"
+      selector:
+        select:
+          options:
+            - "manual"
+            - "automatic"
+    person:
+      selector:
+        entity:
+          domain: person
+    home:
+      selector:
+        entity:
+          domain: zone
+    hospitals:
+      selector:
+        entity:
+          domain: zone
+          multiple: true
+    entry_id:
+      required: true
+      selector:
+        text:
+    token:
+      required: true
+      description: "Read current.guidance.k; independent of contraction and movement revisions."
+      selector:
+        text:
+    location:
+      required: true
+      selector:
+        select:
+          options:
+            - "unspecified"
+            - "home"
+            - "hospital"
+    interval:
+      required: true
+      description: "Seconds between starts; whole minutes only. Default 300."
+      selector:
+        number:
+          min: 60
+          max: 600
+          step: 60
+          mode: box
+edit:
+  name: "Correct a saved contraction"
+  description: "Retain the original and an audit trail; reject stale, overlapping or future times."
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    record_id:
+      required: true
+      selector:
+        text:
+    revision:
+      required: true
+      selector:
+        text:
+    start:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 9999999999
+          mode: box
+    end:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 9999999999
+          mode: box
+    intensity:
+      required: true
+      selector:
+        select:
+          options:
+            - "Not rated"
+            - "Mild"
+            - "Moderate"
+            - "Strong"

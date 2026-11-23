@@ -1,0 +1,43 @@
+{
+  "title": "Contraction Tracker",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Contraction Tracker",
+        "description": "A local logging aid, not a medical device. Requires a working Home Assistant connection. Timings cannot determine labour stage or when birth will occur. Keep a backup timer. Phone controls are Android-first; Samsung controls lock-screen appearance. Other Home Assistant users may be able to see these records.",
+        "data": {
+          "name": "Tracker name",
+          "notification_service": "Android Companion phone (optional)",
+          "home_path": "Home button destination",
+          "public_lock_screen": "Allow contraction details on the locked phone",
+          "acknowledge_limitations": "I understand the medical, connection and household-privacy limitations"
+        }
+      }
+    },
+    "error": {
+      "empty_name": "Enter a name.",
+      "invalid_path": "Use a relative Home Assistant path, such as /lovelace/0.",
+      "notification_unavailable": "That phone notification action is no longer available.",
+      "acknowledgement_required": "Read and acknowledge the limitations before continuing."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tracker options",
+        "description": "Notifications need a connection. Public lock-screen details can be seen by people near the phone. Changes reload this entry; stored timings are retained.",
+        "data": {
+          "notification_service": "Android Companion phone (optional)",
+          "home_path": "Home button destination",
+          "public_lock_screen": "Allow contraction details on the locked phone",
+          "acknowledge_limitations": "I understand the medical, connection and household-privacy limitations"
+        }
+      }
+    },
+    "error": {
+      "invalid_path": "Use a relative Home Assistant path.",
+      "notification_unavailable": "That phone notification action is no longer available.",
+      "acknowledgement_required": "Acknowledge the limitations before continuing."
+    }
+  }
+}

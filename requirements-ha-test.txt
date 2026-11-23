@@ -1,0 +1,3 @@
+# Install only in a separate compatible Home Assistant development environment.
+# The plugin supplies/pins the compatible Home Assistant runtime.
+pytest-homeassistant-custom-component
