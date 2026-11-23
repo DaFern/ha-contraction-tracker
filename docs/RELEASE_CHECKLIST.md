@@ -26,7 +26,8 @@ Do not label the product clinically validated, fully tested or catalog-approved.
 - [x] Run `python3 tools/check_release.py --publish`.
 - [x] Review the generated archive, paths, source matching and checksum;
       two builds produced identical bytes.
-- [ ] Publish a GitHub **prerelease**, not a stable/1.0 readiness claim.
+- [x] Publish `v0.5.0b1` as a GitHub **prerelease**, not a stable/1.0 readiness claim.
+      Its tag/artifacts remain unchanged by follow-up CI-only commits.
 
 Public repository creation and beta publication have been approved. Do not infer
 permission to publish any separate Android code, private snapshots or live data.
@@ -34,13 +35,18 @@ permission to publish any separate Android code, private snapshots or live data.
 ## Remaining verification and catalog gates
 
 - [ ] Complete and record automated native HA tests on the minimum and current
-      supported versions in an isolated environment.
+      supported versions in an isolated environment. Explicit official-package
+      matrix targets are 2026.11.0 and 2026.11.3; mark this complete only after
+      both exact-version jobs and dependency checks pass.
 - [ ] Complete isolated clean-install, browser, restart/offline and physical
       Android acceptance; distinguish these from the accepted owner deployment.
 - [ ] Review auth boundaries, storage validation, unload/reload and record deletion.
 - [ ] Review compatibility with the intended HACS/Marketplace version.
 - [ ] Run Home Assistant hassfest and the appropriate HACS/Marketplace validator.
-- [ ] Run CI on the actual public commit; do not describe queued/failed jobs as passed.
+- [x] Initial beta CI passed on the published commit, but its native tests ran
+      on HA 2026.10.4. Do not treat that as minimum/current-version validation.
+- [ ] Confirm the official-package minimum/current matrix passes on its pushed
+      follow-up commit, then update beta notes with links to those results.
 - [ ] Submit to the catalog only after the required checks pass and submission is
       separately approved. A public repository alone does not create a listing.
 

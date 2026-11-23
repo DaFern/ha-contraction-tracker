@@ -17,20 +17,41 @@ touch interaction, native HA integration or physical-phone tests**.
 
 ## Native Home Assistant tests — separate development environment
 
-Use a disposable compatible environment, not the live instance:
+Use a fresh disposable Python 3.14.2+ environment, not the live instance.
+Home Assistant now supplies the official `pytest-homeassistant` package.
+Install a release matching the exact Home Assistant version being tested:
 
 ```sh
-python -m pip install -r requirements-ha-test.txt
+python -m pip install -r requirements-ha-test.txt "pytest-homeassistant==2026.11.0" "homeassistant==2026.11.0"
+python -m pip check
 pytest tests/ha -v
 ```
 
-The HA test plugin chooses its compatible Home Assistant version. Record that
-version when reporting results. The minimum supported target is HA 2026.11;
-before a release, also run with a plugin/core pair matching that minimum.
-The fixture tests cover setup forms and authorization adapter branches.
+The frontend is an integration dependency that must also be present. CI reads
+`homeassistant/components/frontend/manifest.json` from the installed HA package
+and installs its exact `home-assistant-frontend==...` requirement. Follow the same
+step when reproducing setup-form tests locally; see `.github/workflows/ci.yml`.
+
+CI has independent targets for the declared minimum **2026.11.0** and the current
+stable version at matrix review, **2026.11.3**. Both Home Assistant and the official
+test package are explicitly pinned per target. The workflow asserts their actual
+installed versions and runs `pip check` before tests, so a passing job cannot
+silently refer to a different HA version. Review and advance the explicit current
+target when supporting newer releases; it is not an automatically floating target.
+
+Do not install the retired `pytest-homeassistant-custom-component` alongside the
+official package: they provide overlapping fixtures, and its last published
+release pins HA 2026.10.4. The earlier green beta CI therefore did not validate
+the declared 2026.11 minimum. Do not force newer HA over that dependency pin.
+
+`pytest.ini` supplies the repository import path, function-scoped asyncio fixtures
+and the official package's recommended `-p no:respx` bootstrap setting. Existing
+fixture names remain compatible; no tests are skipped or assertions weakened.
+The native suite covers setup forms, authorization adapter branches and real
+public-Store verification/failure behavior, not complete runtime lifecycle.
 
 Full setup/unload/reload, HTTP static-path serving, actual sidebar registration,
-sensor naming/renaming, multi-entry leases, store I/O failure and mobile-event
+sensor naming/renaming, multi-entry leases, broader storage recovery and mobile-event
 delivery must additionally be exercised in a native HA instance before release.
 Compilation or mocked component tests do not establish these behaviours.
 

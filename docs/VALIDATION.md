@@ -71,14 +71,23 @@ background/lock-screen policy on physical hardware.
 ## CI and remaining gates
 
 The repository workflow runs dependency-free checks and native HA tests in
-separate jobs. The native job installs the test plugin in a disposable runner
-and prints its actual Home Assistant version. Consult the workflow run for the
-specific commit: a queued or failed job is not a passing result.
+separate jobs. Native CI now uses official `pytest-homeassistant` packages and
+explicit matching HA/test-package targets for **2026.11.0** and **2026.11.3**.
+It installs HA's declared frontend dependency, asserts both installed versions
+equal the matrix target and runs `pip check` before the tests. No runtime tracking
+code or release artifact changes are part of this CI migration.
 
-At initial source preparation, native HA tests had not run in the development
-shell. The native tests are not counted among the 92 dependency-free tests.
-Remote results are reported with the beta release/run rather than inferred from
-the owner's live acceptance.
+The beta's original green run passed 10 native tests on HA **2026.10.4**, selected
+by the retired third-party test plugin. That result is real but does not validate
+the declared 2026.11 minimum. The maintainer directs projects to the official
+package; the workflow no longer relies on that older plugin.
+
+Consult the matrix workflow for the specific commit: adding targets is not a
+passing result, and queued/failed jobs must not be described as passed. Native
+tests remain distinct from the 92 dependency-free tests and the owner's live
+acceptance. The new targets' results are reported after both complete; release
+notes are updated only after both pass. The beta's published tag and artifacts
+remain unchanged.
 
 Still required for catalog submission and stronger compatibility claims:
 

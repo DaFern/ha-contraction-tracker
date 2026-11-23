@@ -1,3 +1,4 @@
 # Install only in a separate compatible Home Assistant development environment.
-# The plugin supplies/pins the compatible Home Assistant runtime.
-pytest-homeassistant-custom-component
+# CI adds exact matching Home Assistant/test-package pins for each matrix target.
+# Do not install alongside the retired pytest-homeassistant-custom-component.
+pytest-homeassistant>=2026.11.0,<2026.12.0
