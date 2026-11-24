@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from homeassistant.components import frontend
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import Context
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ServiceValidationError
@@ -177,7 +178,13 @@ async def test_unload_reload_preserves_durable_phase_records_and_timer_anchors(h
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert old.tracker.closed
-    assert hass.states.get(old.tracker.entity_id) is None
+    # HA retains a dormant registry placeholder after platform unload.
+    # It must not expose the old tracker's actionable session payload.
+    unloaded = hass.states.get(old.tracker.entity_id)
+    assert unloaded is not None
+    assert unloaded.state == STATE_UNAVAILABLE
+    assert unloaded.attributes.get("restored") is True
+    assert "current" not in unloaded.attributes
     assert not frontend.async_panel_exists(hass, old.panel_path)
     assert MODULE_URL not in module_urls(hass)
     assert await stored(hass, entry) == before
@@ -306,7 +313,7 @@ async def test_invalid_stored_logical_state_refuses_setup_without_reset(hass):
     assert MODULE_URL not in module_urls(hass)
 
 
-async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass, hass_user):
+async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass, hass_admin_user):
     entry = await setup_entry(hass)
     await command(hass, entry, "show")
     before = deepcopy(await stored(hass, entry))
@@ -314,7 +321,7 @@ async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass
     tag = f"contraction_tracker_{entry.entry_id}"
     for context, supplied_tag in (
         (Context(), tag),
-        (Context(user_id=hass_user.id), "unrelated_notification"),
+        (Context(user_id=hass_admin_user.id), "unrelated_notification"),
     ):
         hass.bus.async_fire(
             "mobile_app_notification_action",
@@ -326,7 +333,7 @@ async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass
     hass.bus.async_fire(
         "mobile_app_notification_action",
         {"action": action, "tag": tag},
-        context=Context(user_id=hass_user.id),
+        context=Context(user_id=hass_admin_user.id),
     )
     await hass.async_block_till_done()
     started = deepcopy(await stored(hass, entry))
@@ -335,7 +342,7 @@ async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass
     hass.bus.async_fire(
         "mobile_app_notification_action",
         {"action": action, "tag": tag},
-        context=Context(user_id=hass_user.id),
+        context=Context(user_id=hass_admin_user.id),
     )
     await hass.async_block_till_done()
     assert await stored(hass, entry) == started

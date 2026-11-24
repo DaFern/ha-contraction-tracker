@@ -122,10 +122,26 @@ unload/reload state recovery, options, multiple entries, scoped removal and
 startup/event failure boundaries. The integration's setup/unload functions are
 not mocked; test records and phone services are synthetic.
 
-At the point of adding these jobs/tests, their results are **pending**, not
-assumed passed. Validator or lifecycle failures must be reported before any
-runtime fixes are made. Neither the existing beta tag nor the live integration
-is changed by adding these checks.
+The [initial expanded run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45301147034)
+on commit `588fdf1` produced these actual results:
+
+- HACS/Marketplace integration validation passed with no ignored checks.
+- Standalone checks/build passed.
+- Hassfest failed on manifest key ordering (`domain`, `name`, then alphabetical).
+  It also warned that the config-entry-only integration lacks a `CONFIG_SCHEMA`
+  declaration. Neither runtime metadata nor setup code was changed to hide this.
+- Each HA target passed 18 native cases, with four failures and one setup error
+  in the newly added tests. The unload tests incorrectly expected registered
+  sensors to disappear rather than become HA's unavailable registry placeholders;
+  the phone test requested a user fixture name absent from the official package.
+
+The test-only correction asserts the unavailable, restored, non-actionable
+placeholder and uses the official `hass_admin_user` fixture. Durable phase/history
+and timer-anchor assertions remain intact; no cases are skipped. Rerun results
+must be recorded separately rather than treating these corrections as a pass.
+
+Validator/runtime failures are reported before runtime fixes are made. Neither
+the existing beta tag nor the live integration is changed by adding these checks.
 
 Even a green run does not establish a whole Core process reboot, real-browser
 rendering/accessibility, actual Android notification delivery or physical-device
