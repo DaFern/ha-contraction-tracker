@@ -1,12 +1,12 @@
 const assetQuery = new URL(import.meta.url).search;
-const { average, duration, escapeHTML: esc, findEntity, homePath, ratings,
+const { average, duration, escapeHTML: esc, findEntity, ratings,
   readCurrent, recentRows, time, trends } =
   await import(new URL(`./state.js${assetQuery}`, import.meta.url).href);
 const { hourly, localDateTime, loadRecords, sendCommand, saveCorrection, saveGuidance } =
   await import(new URL(`./transport.js${assetQuery}`, import.meta.url).href);
 
 const icons = {
-  home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/>',
   baby: '<circle cx="12" cy="13" r="8"/><path d="M12 5c-3 0-2-4 1-3M8 12h.01M16 12h.01M9 16q3 3 6 0"/>',
 };
@@ -25,6 +25,12 @@ export class ContractionTrackerAppCard extends HTMLElement {
     this._records = [];
     this._error = "";
     this.shadowRoot.addEventListener("click", (event) => {
+      if (event.target.closest?.("[data-menu]")) {
+        this.dispatchEvent(new CustomEvent("hass-toggle-menu", {
+          bubbles: true, composed: true, detail: {},
+        }));
+        return;
+      }
       const button = event.target.closest?.("[data-command]");
       if (button) this._send(button.dataset.command);
       if (event.target.closest?.("[data-refresh]")) this._loadHistory();
@@ -378,7 +384,6 @@ export class ContractionTrackerAppCard extends HTMLElement {
       <button class="small" data-refresh ${this._loading || offline ? "disabled" : ""}>Refresh records</button>
       <p class="note">Latest 50 records. Corrections retain the original values. Times use this device’s time zone.</p>`;
     const focused = this.shadowRoot.activeElement?.dataset?.command;
-    const back = homePath(this._config.home_path || entity?.attributes.home_path);
     const movement = c?.movement || {};
     const movementUI = `<section class="movement"><button class="small movement-button" data-command="movement" ${attrs} ${!movement.k ? "disabled" : ""}>${icon("baby")} Movement felt</button>
       <span>${movement.last ? `Last logged ${duration(Math.max(0, Date.now() / 1000 - movement.last))} ago` : "No movement logged yet"}</span></section>`;
@@ -430,7 +435,7 @@ export class ContractionTrackerAppCard extends HTMLElement {
         : c?.notification_failed ? "Notification delivery failed. Timings remain saved; refresh the phone notification to retry." : "";
     this.shadowRoot.innerHTML = `<link rel="stylesheet" href="${styleURL}">
       <article class="app ${active ? "active" : ""} ${offline ? "offline" : ""}">
-      <header><a class="icon" href="${esc(back)}" aria-label="Home">${icon("home")}</a>
+      <header><button class="icon" type="button" data-menu aria-label="Open sidebar">${icon("menu")}</button>
       <div class="brand">${icon("baby")}Contractions</div>
       <button class="icon" data-command="notify" aria-label="Refresh phone notification" ${attrs} ${off || (!this._config.legacy && !entity?.attributes.notifications_enabled) ? "disabled" : ""}>${icon("phone")}</button></header>
       ${this._error || warning ? `<div class="error" role="alert">${esc(this._saveUncertain() ? warning : this._error || warning)}</div>` : ""}

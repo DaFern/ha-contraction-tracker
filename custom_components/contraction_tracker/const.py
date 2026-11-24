@@ -8,7 +8,7 @@ COMMANDS = ("show", "start", "stop", "Mild", "Moderate", "Strong", "end", "notif
             "movement", "reminders_on", "reminders_off", "intensity")
 RATINGS = ("Mild", "Moderate", "Strong")
 STATIC_URL = "/contraction_tracker_static"
-MODULE_URL = f"{STATIC_URL}/tracker.js?v={VERSION}"
+MODULE_URL = f"{STATIC_URL}/tracker.js?v={VERSION}&ui=sidebar1"
 SERVICE_COMMAND = "command"
 CONF_NOTIFY = "notification_service"
 CONF_HOME_PATH = "home_path"

@@ -230,3 +230,16 @@ Physical-phone timeout/Start/Close acceptance remains unverified.
 
 The published 0.5.0b1 tag/assets remain unchanged; 0.5.0b2 has not been published
 as a GitHub release. Deployment is not catalog approval or clinical validation.
+
+### Icon-only sidebar navigation
+
+The approved frontend follow-up replaces the Home link with a hamburger button.
+It emits Home Assistant's `hass-toggle-menu` event with bubbling and composed
+delivery across shadow roots, without navigation or a tracker command. Only the
+icon is visible; `aria-label="Open sidebar"` supplies its screen-reader name.
+The frontend module query includes `ui=sidebar1` to avoid stale cached modules.
+The release version remains the unpublished 0.5.0b2 candidate.
+
+Two additional frontend tests check the icon-only markup and actual click-handler
+dispatch, including no tracker service call or state change. Results, CI and
+deployment verification for this follow-up are pending.

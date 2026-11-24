@@ -22,6 +22,8 @@ tests or isolated fresh-install checks have passed.
 - UI configuration; optional Android Companion notification action.
 - An independent tracker per config entry, with its own local history.
 - A bundled sidebar app and custom card; JavaScript registers automatically.
+- An icon-only menu button opens Home Assistant's sidebar without leaving the
+  tracker. Its accessible name is available to screen readers, not shown as text.
 - Start → Stop → Mild / Moderate / Strong; both interfaces use the same state.
 - True rolling-hour average duration, average start-to-start interval and start
   count (including an active contraction), calculated from the full history.

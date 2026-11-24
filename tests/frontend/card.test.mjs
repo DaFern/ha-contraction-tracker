@@ -8,9 +8,11 @@ globalThis.window = { customCards: [] };
 globalThis.customElements = {
   get: (name) => registry.get(name), define: (name, value) => registry.set(name, value),
 };
-globalThis.HTMLElement = class {
+globalThis.HTMLElement = class extends EventTarget {
   attachShadow() {
-    this.shadowRoot = { innerHTML: "", activeElement: null, addEventListener() {},
+    const handlers = new Map();
+    this.shadowRoot = { innerHTML: "", activeElement: null, handlers,
+      addEventListener(type, handler) { handlers.set(type, handler); },
       querySelector() { return null; } };
   }
 };
@@ -78,6 +80,31 @@ test("compact main controls and initially collapsed accordions render", () => {
   assert.match(html, /Start contraction/);
   assert.equal((html.match(/<details data-section=/g) || []).length, 5);
   assert.doesNotMatch(html, /data-section="history" open/);
+});
+test("header menu is icon-only with an accessible name and no navigation link", () => {
+  const html = card().shadowRoot.innerHTML;
+  const button = html.match(/<button[^>]*data-menu[^>]*>([\s\S]*?)<\/button>/);
+  assert.ok(button);
+  assert.match(button[0], /type="button"/);
+  assert.match(button[0], /aria-label="Open sidebar"/);
+  assert.match(button[1], /^<svg[\s\S]*<\/svg>$/);
+  assert.doesNotMatch(button[0], /href=|data-command=|title=/);
+  assert.doesNotMatch(html, /aria-label="Home"/);
+});
+test("clicking the menu SVG emits HA's composed sidebar event without tracker commands", () => {
+  const calls = [], view = card(state, true, calls), received = [];
+  view.addEventListener("hass-toggle-menu", (event) => received.push(event));
+  const before = JSON.stringify(view._current());
+  view.shadowRoot.handlers.get("click")({
+    target: { closest: (selector) => selector === "[data-menu]" ? {} : null },
+  });
+  assert.equal(received.length, 1);
+  assert.equal(received[0].bubbles, true);
+  assert.equal(received[0].composed, true);
+  assert.deepEqual(received[0].detail, {});
+  assert.equal(calls.length, 0);
+  assert.equal(JSON.stringify(view._current()), before);
+  assert.equal(view._pending, null);
 });
 test("active and rating phases have the correct controls", () => {
   assert.match(card({ ...state, p: "active" }).shadowRoot.innerHTML, /data-command="stop"/);
