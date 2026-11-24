@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFile } from "node:fs/promises";
 import { average, duration, escapeHTML, findEntity, homePath, readCurrent, recentRows, trends }
   from "../../custom_components/contraction_tracker/frontend/state.js";
 
@@ -105,6 +106,34 @@ test("clicking the menu SVG emits HA's composed sidebar event without tracker co
   assert.equal(calls.length, 0);
   assert.equal(JSON.stringify(view._current()), before);
   assert.equal(view._pending, null);
+});
+test("header uses equal edge columns, a centred title and an icon-only bell refresh", async () => {
+  const html = card().shadowRoot.innerHTML;
+  assert.match(html, /data-menu[\s\S]*?<div class="brand"><span>[\s\S]*?Contractions<\/span><\/div>[\s\S]*?data-command="notify"/);
+  const button = html.match(/<button[^>]*data-command="notify"[^>]*>([\s\S]*?)<\/button>/);
+  assert.match(button[0], /aria-label="Refresh notification"/);
+  assert.match(button[1], /^<svg[\s\S]*<\/svg>$/);
+  assert.doesNotMatch(button[0], /title=/);
+  const css = await readFile(new URL("../../custom_components/contraction_tracker/frontend/tracker.css", import.meta.url), "utf8");
+  assert.match(css, /header\{[^}]*grid-template-columns:44px minmax\(0,1fr\) 44px/);
+  assert.match(css, /header \.brand\{[^}]*justify-content:center/);
+  assert.match(css, /\.brand svg\{[^}]*position:absolute/);
+});
+test("paused reminder opt-in stays visible and can be explicitly turned off", () => {
+  const html = card({ ...state, p: "off",
+    movement: { enabled: false, preferred: true, k: "movement-token" } }).shadowRoot.innerHTML;
+  assert.match(html, /Paused · resumes when recording starts/);
+  const button = html.match(/<button[^>]*data-command="reminders_off"[^>]*>Turn reminder off<\/button>/);
+  assert.ok(button);
+  assert.doesNotMatch(button[0], /disabled/);
+  assert.match(html, /Stopping recording pauses reminders/);
+  assert.doesNotMatch(html, /Stopping recording turns the reminder off/);
+});
+test("never-enabled reminder remains off rather than offering automatic resume", () => {
+  const html = card({ ...state, movement: { enabled: false, preferred: false, k: "movement-token" } }).shadowRoot.innerHTML;
+  assert.match(html, /Optional logging reminder: <strong>Off<\/strong>/);
+  assert.match(html, /data-command="reminders_on"/);
+  assert.doesNotMatch(html, /Paused · resumes when recording starts/);
 });
 test("active and rating phases have the correct controls", () => {
   assert.match(card({ ...state, p: "active" }).shadowRoot.innerHTML, /data-command="stop"/);

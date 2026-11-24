@@ -30,7 +30,7 @@ from custom_components.contraction_tracker.const import (
     STATIC_URL,
     STORAGE_VERSION,
 )
-from custom_components.contraction_tracker.model import InvalidCommand
+from custom_components.contraction_tracker.model import InvalidCommand, new_state, transition
 
 
 @pytest.fixture(autouse=True)
@@ -393,3 +393,47 @@ async def test_idle_notification_survives_reload_and_phone_start_or_close(hass, 
         assert after["p"] == "active" and after["n"] == 1
         assert after["i"] == 0 and after["r"] == 0
         assert after["session_id"] != before["session_id"]
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_reminder_preference_upgrade_and_pause_reload_resume_preserve_records(hass, enabled):
+    async def phone(call):
+        pass
+    hass.services.async_register("notify", "mobile_app_preference_test", phone)
+    entry = new_entry(hass, notification="notify.mobile_app_preference_test")
+    now = int(time.time())
+    state = transition(new_state(), "show", "", now - 120)
+    for name,stamp in [("start", now - 120), ("stop", now - 75), ("Mild", now - 70)]:
+        state = transition(state, name, state["k"], stamp)
+    if enabled:
+        state = transition(state, "reminders_on", state["movement"]["k"], now - 60)
+    state = transition(state, "movement", state["movement"]["k"], now - 30)
+    state["schema"] = 6
+    state["movement"].pop("preferred")
+    await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_save(state)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    upgraded = await stored(hass, entry)
+    assert upgraded["schema"] == 7
+    assert upgraded["movement"]["preferred"] is enabled
+    assert upgraded["records"] == state["records"]
+    await command(hass, entry, "end")
+    paused = await stored(hass, entry)
+    assert not paused["movement"]["enabled"]
+    assert paused["movement"]["preferred"] is enabled
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await command(hass, entry, "show")
+    resumed = await stored(hass, entry)
+    assert resumed["movement"]["enabled"] is enabled
+    assert resumed["records"] == state["records"]
+    for key in ("last", "enabled_at", "last_alert", "count"):
+        assert resumed["movement"][key] == state["movement"][key]
+    await command(hass, entry, "end")
+    await command(hass, entry, "reminders_off")
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await command(hass, entry, "show")
+    final = await stored(hass, entry)
+    assert not final["movement"]["preferred"] and not final["movement"]["enabled"]
+    assert final["records"] == state["records"]

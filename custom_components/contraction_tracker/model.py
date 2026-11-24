@@ -30,13 +30,13 @@ def _number(value):
 def new_state():
     """Return an independent empty tracker, not a running session."""
     return {
-        "schema": 6, "p": "off", "k": secrets.token_hex(16), "session_id": "",
+        "schema": 7, "p": "off", "k": secrets.token_hex(16), "session_id": "",
         "idle_ended": False,
         "s": 0, "e": 0, "i": 0, "r": 0, "n": 0, "d": 0, "v": "Not rated",
         "records": [],
         "migration": None,
         "guidance": guidance_defaults(),
-        "movement": {"last": 0, "enabled": False, "enabled_at": 0, "last_alert": 0,
+        "movement": {"last": 0, "enabled": False, "preferred": False, "enabled_at": 0, "last_alert": 0,
                      "k": secrets.token_hex(16), "count": 0},
     }
 
@@ -73,8 +73,14 @@ def load_state(data):
     if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == 5:
         data["schema"] = 6
         data["idle_ended"] = False
+    if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == 6:
+        if not isinstance(data.get("movement"), dict):
+            raise InvalidStorage("Invalid movement logging settings.")
+        data["schema"] = 7
+        # Old Off cannot distinguish a deliberate opt-out from an automatic pause.
+        data["movement"]["preferred"] = data["movement"].get("enabled")
     expected = set(new_state())
-    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 6:
+    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 7:
         raise InvalidStorage("Unsupported or incomplete storage; restore a backup.")
     if type(data["idle_ended"]) is not bool or (data["idle_ended"] and (
             data["p"] != "off" or not data["n"])):
@@ -97,7 +103,9 @@ def load_state(data):
     seen = set()
     movement = data["movement"]
     if (not isinstance(movement, dict) or set(movement) != set(new_state()["movement"])
-            or type(movement["enabled"]) is not bool or not isinstance(movement["k"], str)
+            or type(movement["enabled"]) is not bool or type(movement["preferred"]) is not bool
+            or (movement["enabled"] and (not movement["preferred"] or data["p"] == "off"))
+            or not isinstance(movement["k"], str)
             or len(movement["k"]) != 32 or any(char not in "0123456789abcdef" for char in movement["k"])
             or not isinstance(movement["count"], int) or isinstance(movement["count"], bool)
             or not all(_number(movement[key]) for key in ("last", "enabled_at", "last_alert", "count"))):
@@ -212,9 +220,9 @@ def transition(state, command, token, now):
         elif command == "reminders_on":
             if state["p"] == "off":
                 raise InvalidCommand("Start recording before enabling the logging reminder.")
-            movement.update(enabled=True, enabled_at=now, last_alert=0)
+            movement.update(enabled=True, preferred=True, enabled_at=now, last_alert=0)
         else:
-            movement.update(enabled=False, last_alert=0)
+            movement.update(enabled=False, preferred=False, last_alert=0)
         movement["k"] = secrets.token_hex(16)
         return result
     if command == "intensity" and state["p"] == "rate":
@@ -263,6 +271,9 @@ def transition(state, command, token, now):
         result["movement"].update(enabled=False, k=secrets.token_hex(16))
     else:
         raise InvalidCommand("That action is not available in the current phase.")
+    if state["p"] == "off" and result["p"] != "off" and result["movement"]["preferred"]:
+        # Resume the existing clock: neither session starts nor Stop reset movement.
+        result["movement"].update(enabled=True, k=secrets.token_hex(16))
     result["k"] = secrets.token_hex(16)
     return result
 
@@ -361,7 +372,7 @@ def reminder_due(state, now):
     """A logging reminder, never a fetal-movement or wellbeing assessment."""
     movement = state["movement"]
     anchor = max(movement["last"], movement["enabled_at"], movement["last_alert"])
-    return movement["enabled"] and state["p"] != "off" and now - anchor >= 3600
+    return movement["preferred"] and movement["enabled"] and state["p"] != "off" and now - anchor >= 3600
 
 
 def summarize(rows):

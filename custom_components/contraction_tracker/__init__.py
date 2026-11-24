@@ -235,7 +235,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass, STORAGE_VERSION, store_key, private=True,
                 atomic_writes=True, read_only=True,
             ).async_load()
-        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4, 5):
+        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4, 5, 6):
             data = await verified_save(load_state(data), store.async_save, readback)
         tracker = Tracker(data, store.async_save, notify, location_provider=location_provider, readback=readback)
         # Reconcile elapsed downtime before exposing controls or old rest timers.

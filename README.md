@@ -24,6 +24,8 @@ tests or isolated fresh-install checks have passed.
 - A bundled sidebar app and custom card; JavaScript registers automatically.
 - An icon-only menu button opens Home Assistant's sidebar without leaving the
   tracker. Its accessible name is available to screen readers, not shown as text.
+- The title is centred between the menu and icon-only bell-refresh notification
+  control; refreshing a notification does not start or stop a contraction.
 - Start → Stop → Mild / Moderate / Strong; both interfaces use the same state.
 - True rolling-hour average duration, average start-to-start interval and start
   count (including an active contraction), calculated from the full history.
@@ -63,8 +65,14 @@ tests or isolated fresh-install checks have passed.
   require independent storage read-back before success. Uncertain saves block
   controls until reload and inspection; see [storage safety](docs/ARCHITECTURE.md#verified-persistence).
 - An optional **60-minute no-movement-logged reminder**, off by default, with a
-  switch. Stopping recording disables it. This is not a recommended clinical
-  interval or a fetal-movement monitor.
+  switch. Once enabled, the opt-in is remembered: stopping recording or an idle
+  timeout pauses it, and a new recording session resumes it. Explicitly turning
+  it off keeps it off. Only reminds while recording, after at least an hour
+  without logged movement and at most once an hour. Movement logged while paused
+  also resets that clock; recording starts do not reset it. An overdue reminder
+  may appear soon after resuming. First enabling waits at least an hour.
+  This is not a recommended clinical interval or a fetal-movement monitor.
+  When upgrading, an existing Off remains Off until enabled once.
 - Compact stats, live on-screen timer and collapsed detail/history accordions.
 - Revision guards against double taps and stale notifications.
 - Saved transitions before publication; notification failure never rolls back

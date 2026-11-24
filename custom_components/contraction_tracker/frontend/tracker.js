@@ -7,7 +7,7 @@ const { hourly, localDateTime, loadRecords, sendCommand, saveCorrection, saveGui
 
 const icons = {
   menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
-  phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/>',
+  notification: '<path d="M15 12V9a5 5 0 0 0-10 0v4l-2 3h9M8 19a2 2 0 0 0 3 0M21 14v4h-4M21 18a4 4 0 1 0-1 3"/>',
   baby: '<circle cx="12" cy="13" r="8"/><path d="M12 5c-3 0-2-4 1-3M8 12h.01M16 12h.01M9 16q3 3 6 0"/>',
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
@@ -387,9 +387,12 @@ export class ContractionTrackerAppCard extends HTMLElement {
     const movement = c?.movement || {};
     const movementUI = `<section class="movement"><button class="small movement-button" data-command="movement" ${attrs} ${!movement.k ? "disabled" : ""}>${icon("baby")} Movement felt</button>
       <span>${movement.last ? `Last logged ${duration(Math.max(0, Date.now() / 1000 - movement.last))} ago` : "No movement logged yet"}</span></section>`;
-    const reminder = `<p>Optional logging reminder: <strong>${movement.enabled ? "On · 60 minutes" : "Off"}</strong>.</p>
-      <button class="small" data-command="${movement.enabled ? "reminders_off" : "reminders_on"}" ${attrs} ${(off || (!this._config.legacy && !entity?.attributes.notifications_enabled)) && !movement.enabled ? "disabled" : ""}>${movement.enabled ? "Turn reminder off" : "Enable hourly logging reminder"}</button>
-      <p class="note">This means no movement was logged, not that no movement occurred. If movements reduce, stop or change, tell your midwife immediately—do not wait for this reminder. Stopping recording turns the reminder off.</p>`;
+    const reminderOptIn = movement.preferred ?? movement.enabled;
+    const reminderStatus = movement.enabled ? "On" : reminderOptIn ? "Paused" : "Off";
+    const reminder = `<p>Optional logging reminder: <strong>${movement.enabled ? "On · 60 minutes without logged movement" : reminderOptIn ? "Paused · resumes when recording starts" : "Off"}</strong>.</p>
+      <button class="small" data-command="${reminderOptIn ? "reminders_off" : "reminders_on"}" ${attrs} ${(off || (!this._config.legacy && !entity?.attributes.notifications_enabled)) && !reminderOptIn ? "disabled" : ""}>${reminderOptIn ? "Turn reminder off" : "Enable hourly logging reminder"}</button>
+      <p class="note">Only reminds while recording, after an hour without logged movement. Stopping recording pauses reminders; starting again resumes them if enabled. Turning the reminder off keeps it off.</p>
+      <p class="note">No movement logged does not mean no movement occurred. If movements reduce, stop or change, tell your midwife immediately—do not wait for this reminder.</p>`;
     const guidance = { mode: "manual", person: "", home: "", hospitals: [],
       ...(this._guidanceDraft || c?.guidance || {}) };
     const locationNames = { unspecified: "Not specified", home: "At home", hospital: "In hospital / birth centre" };
@@ -436,8 +439,8 @@ export class ContractionTrackerAppCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<link rel="stylesheet" href="${styleURL}">
       <article class="app ${active ? "active" : ""} ${offline ? "offline" : ""}">
       <header><button class="icon" type="button" data-menu aria-label="Open sidebar">${icon("menu")}</button>
-      <div class="brand">${icon("baby")}Contractions</div>
-      <button class="icon" data-command="notify" aria-label="Refresh phone notification" ${attrs} ${off || (!this._config.legacy && !entity?.attributes.notifications_enabled) ? "disabled" : ""}>${icon("phone")}</button></header>
+      <div class="brand"><span>${icon("baby")}Contractions</span></div>
+      <button class="icon" data-command="notify" aria-label="Refresh notification" ${attrs} ${off || (!this._config.legacy && !entity?.attributes.notifications_enabled) ? "disabled" : ""}>${icon("notification")}</button></header>
       ${this._error || warning ? `<div class="error" role="alert">${esc(this._saveUncertain() ? warning : this._error || warning)}</div>` : ""}
       ${offline ? '<div class="error" role="status">Offline · last known state. Controls are disabled.</div>' : ""}
       <section class="hero"><div class="status"><span class="dot"></span>${phase}</div>
@@ -451,7 +454,7 @@ export class ContractionTrackerAppCard extends HTMLElement {
       ${recent}
       ${movementUI}
       ${this._section("trends", "Patterns & averages", `${last.length} recent`, pattern)}
-      ${this._section("movement", "Movement logging reminder", movement.enabled ? "On" : "Off", reminder)}
+      ${this._section("movement", "Movement logging reminder", reminderStatus, reminder)}
       ${this._section("guidance", "Contact prompts & location", c?.guidance?.mode === "automatic" ? "Automatic" : locationNames[c?.guidance?.location] || "Not specified", guidanceUI)}
       ${this._section("history", "Detailed history", "Saved", history)}
       ${this._section("about", "About these timings", "", "<p>Requires Home Assistant and a working connection. Times use when the server receives controls, not the exact phone tap time.</p><p>Contractions alone cannot determine labour stage, dilation or when birth will occur. Follow your maternity team’s advice.</p><p>This is not a medical device. Keep a backup timer.</p>")}

@@ -255,3 +255,26 @@ fingerprint were unchanged. An authenticated 430-pixel screenshot confirmed the
 hamburger icon with no visible label and the retained tracker layout.
 This screenshot did not click the live menu; event dispatch is covered by the
 frontend test, while physical-phone interaction remains owner acceptance.
+
+### Remembered reminder opt-in and header presentation
+
+The approved follow-up adds stored schema 7 with `movement.preferred`, separate
+from the session-active `movement.enabled`. Manual session stop and inactivity
+pause reminders without removing consent; new recording sessions resume only a
+previous opt-in. Explicit Off removes that preference, including while paused.
+Migration copies only the old current Enabled value, never inferring consent
+from an old timestamp. Existing Off settings therefore stay Off.
+
+Recording starts preserve movement timestamps and cooldown. A reminder is due
+only while recording, after at least one hour since the latest of logged
+movement, initial enable and the previous attempt. A recent movement suppresses
+it, including a movement logged while recording was paused. A resumed overdue
+reminder can be sent on the next scheduler check. The hourly attempt is saved
+and independently verified before delivery, preventing minute-by-minute retries
+after ambiguous phone delivery; a failed attempt can consequently be missed.
+No alert is a clinical assessment of movement or wellbeing.
+
+The header text is centred independently of its decorative icon; the phone icon
+is replaced by an icon-only bell/refresh symbol. Screen-reader naming remains.
+Local results: 113 Python and 37 frontend tests passed. Fresh native CI,
+validators, deployment/restart and visual verification are pending.

@@ -206,7 +206,7 @@ def convert(bundle, now):
             raise InvalidCommand("Legacy empty current session is inconsistent.")
         result["session_id"] = _session(entities["records"], "empty:" + old["k"]) if old["p"] != "off" else ""
     movement = bundle["movement"]
-    if not isinstance(movement, dict) or set(movement) != set(result["movement"]):
+    if not isinstance(movement, dict) or set(movement) != set(result["movement"]) - {"preferred"}:
         raise InvalidCommand("Incomplete legacy movement settings.")
     if type(movement["enabled"]) is not bool or not isinstance(movement["k"], str) or not movement["k"]:
         raise InvalidCommand("Invalid legacy movement controls.")
@@ -217,6 +217,7 @@ def convert(bundle, now):
     if bool(movement["last"]) != bool(movement["count"]) or (movement["enabled"] and (not movement["enabled_at"] or old["p"] == "off")):
         raise InvalidCommand("Legacy movement logging/reminder state is inconsistent.")
     result["movement"].update({key: movement[key] for key in movement if key != "k"})
+    result["movement"]["preferred"] = movement["enabled"]
     raw_guidance = bundle["guidance"]
     if not isinstance(raw_guidance, dict) or not {"location", "interval", "k"} <= set(raw_guidance):
         raise InvalidCommand("Incomplete legacy contact settings.")

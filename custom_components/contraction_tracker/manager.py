@@ -224,11 +224,13 @@ class Tracker:
             now = int(self._clock())
             if reminder_due(self._state, now) and self.warning_notify is not None:
                 try:
-                    async with asyncio.timeout(10):
-                        await self.warning_notify(self.view())
                     candidate = deepcopy(self._state)
                     candidate["movement"]["last_alert"] = now
+                    # Claim this hour durably before attempting delivery. An
+                    # ambiguous phone response must not cause minute-by-minute repeats.
                     await self._commit(candidate)
+                    async with asyncio.timeout(10):
+                        await self.warning_notify(self.view())
                 except Exception:
                     self.notification_failed = True
                     _LOGGER.warning("Optional movement logging reminder could not be confirmed")

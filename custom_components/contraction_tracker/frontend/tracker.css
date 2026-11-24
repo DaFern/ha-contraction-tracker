@@ -1,8 +1,8 @@
 :host{display:block;color:#eaf2f5;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 *{box-sizing:border-box}button,a,summary{-webkit-tap-highlight-color:transparent}
 .app{--muted:#a9bac5;--teal:#91e4d2;background:linear-gradient(155deg,#162b3a,#101e2c 65%);border:1px solid #314352;border-radius:26px;padding:18px;box-shadow:0 12px 36px #0002;overflow:hidden}
-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}header .brand{flex:1;font-size:15px;font-weight:650;letter-spacing:-.2px}
-svg{height:20px;width:20px;flex-shrink:0}.brand svg{vertical-align:middle;margin-right:7px;color:var(--teal)}
+header{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:10px;margin-bottom:20px}header .brand{display:flex;align-items:center;justify-content:center;min-width:0;white-space:nowrap;text-align:center;font-size:15px;font-weight:650;letter-spacing:-.2px}
+svg{height:20px;width:20px;flex-shrink:0}.brand>span{position:relative}.brand svg{position:absolute;left:-7px;top:50%;transform:translate(-100%,-50%);color:var(--teal)}
 button,a{font:inherit}.icon{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid #ffffff16;border-radius:14px;background:#ffffff05;color:#cfdee5;text-decoration:none;cursor:pointer}
 .icon:hover{background:#ffffff12}.status{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--teal);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:9px}
 .dot{height:6px;width:6px;border-radius:50%;background:var(--teal)}.active .dot{background:#ff9c99;animation:pulse 2s ease-in-out infinite}.offline .dot{background:#ffd19c}

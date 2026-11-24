@@ -88,6 +88,15 @@ browser execution, touch interaction or accessibility.
 
 ## Distribution validators
 
+Reminder-preference tests cover manual and idle-session pauses, ordinary and
+notification-based session restarts, explicit opt-out while paused, movement
+logged in or out of a session, exact hourly boundaries, and schema-6 upgrades.
+The native suite checks verified upgrade and pause/reload/resume with full ledger
+and movement timestamps preserved. Cooldown is saved and independently read back
+before notification delivery; uncertain delivery is not retried every minute.
+This deliberately prefers a potentially missed reminder over duplicate alerts.
+It is not a fetal-movement monitor.
+
 CI runs the official `home-assistant/actions/hassfest` action and
 `hacs/action` with category `integration` and **no ignored checks**. The HACS action
 uses the repository/catalog validation code; passing it does not submit or add
