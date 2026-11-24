@@ -108,8 +108,8 @@ Still required for catalog submission and stronger compatibility claims:
 - Isolated clean installation without legacy resources, full lifecycle and
   restart/offline recovery, multi-entry leases and end-to-end entity permissions.
 - Physical-device coverage beyond the owner's accepted Android workflow.
-- Passing hassfest and HACS/Marketplace validation and a separately approved
-  catalog submission.
+- A separately approved catalog submission, retaining passing hassfest and
+  HACS/Marketplace validation on the candidate commit.
 - Continued review of privacy, record-deletion/export limitations and safety
   wording. No labour-stage, dilation or fetal-wellbeing determination is made.
 
@@ -152,10 +152,24 @@ warning; the overall workflow therefore failed. No runtime fix was applied.
 With owner approval, the source manifest keys are now ordered `domain`, `name`,
 then alphabetically, and `__init__.py` declares
 `CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)`, matching its UI-only
-setup. The tracking, storage and notification logic is unchanged. Validation of
-these two fixes is pending a new CI run; the earlier failing results remain
-historical evidence, not a pass. The published beta tag/assets and installed
-integration remain unchanged.
+setup. The tracking, storage and notification logic is unchanged.
+
+The [post-fix CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45397920045)
+on commit `b64c8d48a464eb1467455ee693046947bc1eeb71` passed all five jobs:
+
+- Hassfest passed; the manifest ordering error and schema warning are resolved.
+- HACS/Marketplace passed without ignored checks. Its non-blocking missing
+  manifest categories warning remains.
+- HA 2026.11.0 and 2026.11.3 each passed all 23 native tests, with matching
+  official test-package versions and clean `pip check` results.
+- All 92 Python unit tests and 31 frontend tests passed, along with asset,
+  release-structure and archive-build checks.
+
+Native test warnings and GitHub Actions Node-version deprecation warnings remain
+visible in the logs. The earlier failing runs are retained as historical evidence.
+These fixes are on the repository branch only: the published beta tag/assets and
+installed integration remain unchanged. This green branch run does not validate
+a newly published release artifact or authorize deployment/catalog submission.
 
 Even a green run does not establish a whole Core process reboot, real-browser
 rendering/accessibility, actual Android notification delivery or physical-device
