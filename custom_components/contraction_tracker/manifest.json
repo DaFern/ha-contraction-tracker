@@ -2,6 +2,7 @@
   "domain": "contraction_tracker",
   "name": "Contraction Tracker",
   "after_dependencies": ["mobile_app"],
+  "categories": ["helpers", "health_wellbeing"],
   "codeowners": ["@DaFern"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],

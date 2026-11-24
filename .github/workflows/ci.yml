@@ -9,7 +9,7 @@ jobs:
     name: "hassfest"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: "Validate integration metadata and resources"
         uses: home-assistant/actions/hassfest@master
   hacs:
@@ -24,11 +24,11 @@ jobs:
   isolated-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.14"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: "24"
       - run: python3 tools/build_assets.py
@@ -48,8 +48,8 @@ jobs:
     env:
       HA_TEST_VERSION: "${{ matrix.ha_version }}"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.14"
       - name: "Install matched Home Assistant and official test package"

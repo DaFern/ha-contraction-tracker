@@ -171,6 +171,21 @@ These fixes are on the repository branch only: the published beta tag/assets and
 installed integration remain unchanged. This green branch run does not validate
 a newly published release artifact or authorize deployment/catalog submission.
 
+### Warning cleanup
+
+The approved source follow-up adds manifest categories `helpers` and
+`health_wellbeing`, and upgrades GitHub Actions to checkout `v7.0.1`,
+setup-python `v7.1.0` and setup-node `v7.1.0`, all using Node 24.
+Fresh CI results for these changes are pending; no warning filters or dependency
+overrides were added.
+
+The five native Python warnings per target come from upstream code: one
+aiohttp application-inheritance deprecation in Home Assistant's HTTP server and
+four deprecated `asyncio.iscoroutinefunction` uses in `backoff`. They remain
+visible on the exact pinned HA targets. Tracker code does not generate these
+warnings, and patching or replacing HA's dependencies would invalidate the
+matched-version evidence. The installed tracker and published beta remain unchanged.
+
 Even a green run does not establish a whole Core process reboot, real-browser
 rendering/accessibility, actual Android notification delivery or physical-device
 offline/reconnect behavior. Those remain separate acceptance work, and a green
