@@ -241,5 +241,17 @@ The frontend module query includes `ui=sidebar1` to avoid stale cached modules.
 The release version remains the unpublished 0.5.0b2 candidate.
 
 Two additional frontend tests check the icon-only markup and actual click-handler
-dispatch, including no tracker service call or state change. Results, CI and
-deployment verification for this follow-up are pending.
+dispatch using the DOM stand-in, including no tracker service call or state
+change. The [sidebar follow-up CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45418661035)
+on commit `e4deec37a8bf82c9b85f83bbe35d5a4b3bcadf44` passed all five jobs:
+102 Python tests, 34 frontend tests, 25 native tests on each HA target,
+dependency checks, hassfest, HACS and release build.
+
+The two changed runtime files were deployed and the complete installed package
+was checked against committed source. Configuration validation passed. The
+approved restart returned 502; after the required 60-second wait, Core reported
+RUNNING with the integration loaded. The record count and recent-history
+fingerprint were unchanged. An authenticated 430-pixel screenshot confirmed the
+hamburger icon with no visible label and the retained tracker layout.
+This screenshot did not click the live menu; event dispatch is covered by the
+frontend test, while physical-phone interaction remains owner acceptance.
