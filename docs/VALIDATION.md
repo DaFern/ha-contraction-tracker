@@ -140,6 +140,15 @@ placeholder and uses the official `hass_admin_user` fixture. Durable phase/histo
 and timer-anchor assertions remain intact; no cases are skipped. Rerun results
 must be recorded separately rather than treating these corrections as a pass.
 
+The [corrected-suite run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45301704031)
+on commit `eea237c636dc7e24ef7bf1a3a67a7869346d4bae` passed **23 native tests
+on each of HA 2026.11.0 and 2026.11.3**, including all 13 new lifecycle cases.
+Both exact-version assertions and dependency checks passed. Standalone checks,
+92 Python unit tests, frontend tests and the release build also passed.
+HACS passed again without ignored checks, with a non-blocking missing-categories
+warning. Hassfest still failed on manifest ordering and retained its schema
+warning; the overall workflow therefore failed. No runtime fix was applied.
+
 Validator/runtime failures are reported before runtime fixes are made. Neither
 the existing beta tag nor the live integration is changed by adding these checks.
 

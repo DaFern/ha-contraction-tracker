@@ -41,8 +41,9 @@ permission to publish any separate Android code, private snapshots or live data.
       This does not complete the broader lifecycle/clean-install checklist.
 - [ ] Complete isolated clean-install, browser, restart/offline and physical
       Android acceptance; distinguish these from the accepted owner deployment.
-      A new fixture-based setup/lifecycle suite is configured on both HA targets;
-      its results are pending and it is not a substitute for real browser,
+      The fixture-based setup/lifecycle suite passed on both HA targets:
+      23 native tests each in [run 45301704031](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45301704031).
+      This is not a substitute for real browser,
       complete process-reboot or physical-device/offline acceptance.
 - [ ] Review auth boundaries, storage validation, unload/reload and record deletion.
 - [ ] Review compatibility with the intended HACS/Marketplace version.
