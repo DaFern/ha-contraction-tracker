@@ -88,7 +88,7 @@ class GuidanceTests(unittest.TestCase):
         old["schema"] = 2
         del old["guidance"]
         migrated = model.load_state(old)
-        self.assertEqual(migrated["schema"], 5)
+        self.assertEqual(migrated["schema"], 6)
         for key in old:
             if key != "schema":
                 self.assertEqual(migrated[key], old[key])

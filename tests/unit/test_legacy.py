@@ -181,7 +181,7 @@ class LegacyConversionTests(unittest.TestCase):
         for row in old["records"]:
             row.pop("legacy")
         result = model.load_state(old)
-        self.assertEqual(result["schema"], 5)
+        self.assertEqual(result["schema"], 6)
         self.assertIsNone(result["migration"])
         self.assertTrue(all(row["legacy"] is None for row in result["records"]))
 

@@ -235,9 +235,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass, STORAGE_VERSION, store_key, private=True,
                 atomic_writes=True, read_only=True,
             ).async_load()
-        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4):
+        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4, 5):
             data = await verified_save(load_state(data), store.async_save, readback)
         tracker = Tracker(data, store.async_save, notify, location_provider=location_provider, readback=readback)
+        # Reconcile elapsed downtime before exposing controls or old rest timers.
+        await tracker.tick()
+        if tracker.persistence_uncertain:
+            raise PersistenceError("Idle-session closure could not be verified.")
     except PersistenceError as err:
         raise ConfigEntryError("Stored data upgrade could not be verified. Inspect storage before retrying; no reset was performed.") from err
     except InvalidStorage as err:
@@ -307,7 +311,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def tick(_now):
         await tracker.tick()
     entry.async_on_unload(async_track_time_interval(hass, tick, timedelta(minutes=1)))
-    if tracker.view()["p"] != "off":
+    if tracker.view()["p"] != "off" or tracker.view()["idle_ended"]:
         entry.async_create_background_task(hass, tracker.refresh_notification(),
                                            "Restore contraction notification")
     return True

@@ -6,6 +6,7 @@ Only the explicit panel-registration failure test injects a failing dependency.
 """
 
 from copy import deepcopy
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -346,3 +347,49 @@ async def test_phone_dispatch_rejects_anonymous_wrong_tag_and_stale_actions(hass
     )
     await hass.async_block_till_done()
     assert await stored(hass, entry) == started
+
+
+@pytest.mark.parametrize("close", [False, True])
+async def test_idle_notification_survives_reload_and_phone_start_or_close(hass, hass_admin_user, close):
+    calls = []
+    async def phone(call):
+        calls.append(deepcopy(dict(call.data)))
+    hass.services.async_register("notify", "mobile_app_idle_test", phone)
+    entry = await setup_entry(hass, notification="notify.mobile_app_idle_test")
+    tracker = entry.runtime_data.tracker
+    base = int(time.time()) - 4000
+    tracker._clock = lambda: base
+    await command(hass, entry, "show")
+    await command(hass, entry, "start")
+    tracker._clock = lambda: base + 60
+    await command(hass, entry, "stop")
+    await command(hass, entry, "Mild")
+    before = deepcopy(await stored(hass, entry))
+    # Reload is the startup/downtime path: reconcile before exposing controls.
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    ended = await stored(hass, entry)
+    assert ended["idle_ended"] and ended["p"] == "off"
+    assert ended["records"] == before["records"]
+    main = [call for call in calls if call.get("message") != "clear_notification"]
+    assert "Recording ended after inactivity" in main[-1]["message"]
+    assert main[-1]["data"]["persistent"]
+    assert not main[-1]["data"]["chronometer"]
+    name = "end" if close else "start"
+    hass.bus.async_fire(
+        "mobile_app_notification_action",
+        {"action": f"CT|{entry.entry_id}|{name}|{ended['k']}",
+         "tag": f"contraction_tracker_{entry.entry_id}"},
+        context=Context(user_id=hass_admin_user.id),
+    )
+    await hass.async_block_till_done()
+    after = await stored(hass, entry)
+    assert not after["idle_ended"]
+    assert after["records"] == before["records"]
+    if close:
+        assert after["p"] == "off"
+        assert calls[-1]["message"] == "clear_notification"
+    else:
+        assert after["p"] == "active" and after["n"] == 1
+        assert after["i"] == 0 and after["r"] == 0
+        assert after["session_id"] != before["session_id"]

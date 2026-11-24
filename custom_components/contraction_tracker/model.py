@@ -30,7 +30,8 @@ def _number(value):
 def new_state():
     """Return an independent empty tracker, not a running session."""
     return {
-        "schema": 5, "p": "off", "k": secrets.token_hex(16), "session_id": "",
+        "schema": 6, "p": "off", "k": secrets.token_hex(16), "session_id": "",
+        "idle_ended": False,
         "s": 0, "e": 0, "i": 0, "r": 0, "n": 0, "d": 0, "v": "Not rated",
         "records": [],
         "migration": None,
@@ -69,9 +70,15 @@ def load_state(data):
             if not isinstance(row, dict):
                 raise InvalidStorage("Invalid stored record.")
             row["legacy"] = None
+    if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == 5:
+        data["schema"] = 6
+        data["idle_ended"] = False
     expected = set(new_state())
-    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 5:
+    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 6:
         raise InvalidStorage("Unsupported or incomplete storage; restore a backup.")
+    if type(data["idle_ended"]) is not bool or (data["idle_ended"] and (
+            data["p"] != "off" or not data["n"])):
+        raise InvalidStorage("Invalid idle-session state.")
     if not valid_guidance(data["guidance"]):
         raise InvalidStorage("Invalid contact-prompt settings.")
     if data["p"] not in ("off", "rest", "active", "rate"):
@@ -95,6 +102,8 @@ def load_state(data):
             or not isinstance(movement["count"], int) or isinstance(movement["count"], bool)
             or not all(_number(movement[key]) for key in ("last", "enabled_at", "last_alert", "count"))):
         raise InvalidStorage("Invalid movement logging settings.")
+    if data["idle_ended"] and movement["enabled"]:
+        raise InvalidStorage("An idle-ended session cannot keep reminders enabled.")
     record_keys = {"id", "session_id", "number", "start", "end", "duration", "interval", "rest", "intensity",
                    "revision", "audit", "original", "legacy"}
     for row in data["records"]:
@@ -177,6 +186,16 @@ def load_state(data):
     return deepcopy(data)
 
 
+def expire_idle(state, now):
+    """End only a completed, inactive session; never infer a contraction end."""
+    if state["p"] not in ("rest", "rate") or not state["n"] or now - state["e"] < 3600:
+        return deepcopy(state)
+    result = deepcopy(state)
+    result.update(p="off", idle_ended=True, k=secrets.token_hex(16))
+    result["movement"].update(enabled=False, k=secrets.token_hex(16))
+    return result
+
+
 def transition(state, command, token, now):
     """Build a candidate; callers must persist it before publishing or notifying."""
     if not _number(now):
@@ -209,15 +228,18 @@ def transition(state, command, token, now):
         raise InvalidCommand("This control is out of date. Refresh the tracker.")
     result = deepcopy(state)
     if command == "show" and state["p"] == "off":
-        result.update(p="rest", session_id=uuid4().hex, s=0, e=0, i=0, r=0, n=0, d=0, v="Not rated")
-    elif command == "start" and state["p"] == "rest":
+        result.update(p="rest", idle_ended=False, session_id=uuid4().hex,
+                      s=0, e=0, i=0, r=0, n=0, d=0, v="Not rated")
+    elif command == "start" and (state["p"] == "rest" or state["idle_ended"]):
         if len(state["records"]) >= MAX_RECORDS:
             raise InvalidCommand("History is full. Existing records were not deleted.")
         if now < max(state["s"], state["e"]):
             raise InvalidCommand("Server time moved backwards. Check time synchronization.")
-        result.update(p="active", s=now, n=state["n"] + 1, d=0, v="Not rated",
-                      i=now - state["s"] if state["n"] else 0,
-                      r=now - state["e"] if state["n"] else 0)
+        if state["idle_ended"]:
+            result.update(session_id=uuid4().hex, n=0, s=0, e=0)
+        result.update(p="active", idle_ended=False, s=now, n=result["n"] + 1, d=0, v="Not rated",
+                      i=now - state["s"] if result["n"] else 0,
+                      r=now - state["e"] if result["n"] else 0)
     elif command == "stop" and state["p"] == "active":
         if now < state["s"]:
             raise InvalidCommand("Server time moved backwards. Check time synchronization.")
@@ -236,8 +258,8 @@ def transition(state, command, token, now):
         result["records"][-1]["revision"] = secrets.token_hex(16)
         if result["records"][-1]["legacy"] is None:
             result["records"][-1]["original"]["intensity"] = command
-    elif command == "end" and state["p"] == "rest":
-        result["p"] = "off"
+    elif command == "end" and (state["p"] == "rest" or state["idle_ended"]):
+        result.update(p="off", idle_ended=False)
         result["movement"].update(enabled=False, k=secrets.token_hex(16))
     else:
         raise InvalidCommand("That action is not available in the current phase.")

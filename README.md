@@ -4,7 +4,7 @@ A calm, phone-first contraction logger for Home Assistant: one shared timer,
 actionable Android notifications and a compact app-style card with expandable
 patterns and history.
 
-**0.5.0b1 · public beta · owner-accepted live deployment.**
+**0.5.0b2 · development candidate.** Published beta: **0.5.0b1**.
 
 This integration is offered for public testing, with HACS/Marketplace distribution intended.
 Its directory layout is compatible with those tools; catalog inclusion has not
@@ -34,6 +34,13 @@ tests or isolated fresh-install checks have passed.
 - Plain-text phone notifications: last length, hourly average interval and
   average length on separate lines, followed by short bullets. The phone-only
   **Close** button still stops recording; the card keeps **Stop recording**.
+- After 60 minutes since the last contraction ended, an idle session closes
+  automatically without changing its records. The persistent phone notification
+  stays available: **Start** starts a contraction in a fresh session, with no
+  interval carried across the gap; **Close** dismisses it. Movement logging stays
+  independent and does not prolong a contraction session.
+  An unselected intensity remains **Not rated**. An actively running contraction
+  is never automatically stopped or assigned a fabricated end time.
 - Manual location (**Not specified**, **At home**, **In hospital / birth centre**)
   or opt-in **Automatic · selected zones**, plus an editable whole-minute
   care-team contact interval under **Contact prompts & location**. Defaults:
@@ -79,6 +86,10 @@ No existing personal history was copied into this project.
   clock can affect the displayed live counter; saved times come from the server.
 - After an outage, restored timing is explicitly flagged. Events made offline
   can be missing; this is not an offline phone app.
+- Idle closure is checked every minute while HA runs, before timer commands and
+  on integration startup after downtime. A stale button may need a refresh.
+  The timeout is session housekeeping, not a clinical assessment that contractions
+  have stopped. Existing saved intervals are never retrospectively rewritten.
 - There is no universal safe interval for baby movements. NHS guidance says to
   contact the midwife/maternity unit immediately if movements reduce, stop or
   change. **Do not wait for the optional logging reminder.** See

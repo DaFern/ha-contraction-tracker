@@ -349,7 +349,7 @@ export class ContractionTrackerAppCard extends HTMLElement {
     const attrs = disabled ? "disabled" : "";
     const active = c?.p === "active", rate = c?.p === "rate", off = c?.p === "off";
     const phase = !c ? "Select an available tracker" : active ? "Contraction in progress"
-      : rate ? "Contraction recorded" : off ? "Session paused"
+      : rate ? "Contraction recorded" : off ? (c?.idle_ended ? "Recording ended after inactivity" : "Session paused")
         : c.e ? "Rest between contractions" : "Ready when you are";
     const caption = active ? `Contraction ${c.n} · started ${time(c.s)}`
       : rate ? `Lasted ${duration(c.d)} · timer shows rest`

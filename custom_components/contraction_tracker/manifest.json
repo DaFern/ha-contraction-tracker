@@ -11,5 +11,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/DaFern/ha-contraction-tracker/issues",
   "requirements": [],
-  "version": "0.5.0b1"
+  "version": "0.5.0b2"
 }

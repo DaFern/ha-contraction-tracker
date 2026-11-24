@@ -74,7 +74,7 @@ class CorrectionTests(unittest.TestCase):
             for key in ("revision", "audit", "original"):
                 row.pop(key)
         restored = model.load_state(state)
-        self.assertEqual(restored["schema"], 5)
+        self.assertEqual(restored["schema"], 6)
         self.assertEqual(len(restored["records"]), 3)
         self.assertFalse(restored["movement"]["enabled"])
 

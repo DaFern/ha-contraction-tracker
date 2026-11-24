@@ -85,6 +85,12 @@ test("active and rating phases have the correct controls", () => {
   for (const rating of ["Mild", "Moderate", "Strong"]) assert.match(html, new RegExp(`data-command="${rating}"`));
   assert.doesNotMatch(html, /data-command="start"/);
 });
+test("idle-ended session explains closure without showing a running rest timer", () => {
+  const html = card({ ...state, p: "off", idle_ended: true }).shadowRoot.innerHTML;
+  assert.match(html, /Recording ended after inactivity/);
+  assert.match(html, /Start recording/);
+  assert.doesNotMatch(html, /Time since the last contraction ended/);
+});
 test("offline and card-editor preview cannot issue commands", async () => {
   const calls = [];
   await card(state, false, calls)._send("start");

@@ -70,6 +70,14 @@ The suite checks:
 - Removal of only the selected entry's store.
 - Cleanup after a failed panel registration and refusal to reset invalid logical state.
 - Actual phone-event dispatch with anonymous, wrong-tag and stale-action refusal.
+- Idle-session reconciliation after downtime, retained notification and authorized
+  phone Start/Close after reload, preserving the full synthetic ledger.
+
+`tests/unit/test_idle_session.py` checks the exact 60-minute boundary, unrated
+records, active-contraction protection, independent movement, schema-5 upgrade,
+new session/zero interval, stale buttons, verified-save failures and notification
+restoration/dismissal. Frontend coverage checks the inactivity message and absence
+of a running rest caption. These do not establish physical Android delivery.
 
 These are automated fixture-based integration tests, not a fresh OS installation
 or rendered-browser/device acceptance. An unload/reload reconstruction is not a

@@ -5,7 +5,7 @@ from copy import deepcopy
 import logging
 import time
 
-from .model import InvalidCommand, configure_guidance, correct, load_state, reminder_due, snapshot, transition
+from .model import InvalidCommand, configure_guidance, correct, expire_idle, load_state, reminder_due, snapshot, transition
 from .location import uncertain
 from .legacy import convert, digest, require_pristine, source_digest, summary as import_summary
 
@@ -99,6 +99,7 @@ class Tracker:
             self._check_save_outcome()
             if self.closed:
                 raise InvalidCommand("This tracker is unloading. Refresh when it reconnects.")
+            await self._expire_idle(received)
             candidate = transition(self._state, command, token, received)
             if command == "intensity" and self.rating_notify is not None:
                 try:
@@ -211,6 +212,11 @@ class Tracker:
         async with self._lock:
             if self.closed or self.persistence_uncertain or self.import_uncertain:
                 return
+            try:
+                await self._expire_idle(int(self._clock()))
+            except PersistenceError:
+                _LOGGER.warning("Idle-session closure could not be verified; controls are blocked")
+                return
             self._publish()
             if self._state["guidance"]["mode"] == "automatic" and self._state["p"] != "off":
                 if self.view()["location"] != self._last_location:
@@ -228,6 +234,15 @@ class Tracker:
                     _LOGGER.warning("Optional movement logging reminder could not be confirmed")
                 self._publish()
 
+    async def _expire_idle(self, now):
+        """Caller holds the lock; publish/notify only after verified persistence."""
+        candidate = expire_idle(self._state, now)
+        if candidate != self._state:
+            await self._commit(candidate)
+            self.restored = False
+            self._publish()
+            await self._push()
+
     async def refresh_notification(self):
         await self.command("notify")
 
@@ -243,7 +258,7 @@ class Tracker:
         async with self._lock:
             try:
                 async with asyncio.timeout(3):
-                    await self._notify({**self.view(), "p": "off"})
+                    await self._notify({**self.view(), "p": "off", "idle_ended": False})
             except Exception:
                 _LOGGER.warning("Notification cleanup could not be confirmed")
             self._listeners.clear()

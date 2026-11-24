@@ -1,7 +1,7 @@
 """Shared constants. This project is independent of any household configuration."""
 
 DOMAIN = "contraction_tracker"
-VERSION = "0.5.0b1"
+VERSION = "0.5.0b2"
 STORAGE_VERSION = 1
 MAX_RECORDS = 10000
 COMMANDS = ("show", "start", "stop", "Mild", "Moderate", "Strong", "end", "notify",

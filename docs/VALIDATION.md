@@ -197,3 +197,22 @@ offline/reconnect behavior. Those remain separate acceptance work, and a green
 HACS action does not itself make a catalog submission.
 
 See [TESTING.md](TESTING.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+
+## 0.5.0b2 idle-session candidate
+
+The approved follow-up closes a completed session after 60 minutes without
+another contraction, retaining a persistent Start/Movement/Close notification.
+Start creates a fresh session with no cross-session interval; Close dismisses it.
+All existing records, original values, revisions and provenance are preserved.
+No active contraction is automatically ended; an unanswered rating remains
+Not rated. Movement/settings activity does not extend the contraction deadline.
+
+Stored schema 5 upgrades to 6 by adding `idle_ended: false`; the setup adapter
+independently verifies this write before reconciling overdue idle state. Idle
+closure itself also requires verified persistence before publishing/notifying.
+Existing manually closed sessions do not acquire a notification on upgrade.
+
+Local results: 102 Python tests and 32 frontend tests passed. Native minimum/
+current CI, hassfest and HACS results are pending. Deployment/restart verification
+is not yet complete. The published 0.5.0b1 tag/assets remain unchanged; 0.5.0b2
+has not been published as a GitHub release.

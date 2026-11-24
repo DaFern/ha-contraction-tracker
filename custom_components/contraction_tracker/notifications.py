@@ -5,13 +5,16 @@ from .const import STATIC_URL
 
 def build_notification(view, entry_id, path, public=False, title="Contraction Tracker"):
     tag = f"contraction_tracker_{entry_id}"
-    if view["p"] == "off":
+    idle = view.get("idle_ended", False)
+    if view["p"] == "off" and not idle:
         return {"message": "clear_notification", "data": {"tag": tag}}
     def action(command, label=None):
         return {"action": f"CT|{entry_id}|{command}|{view['k']}", "title": label or command}
     move = {"action": f"CT|{entry_id}|movement|{view['movement']['k']}", "title": "Movement"}
     phase = view["p"]
-    if phase == "active":
+    if idle:
+        actions = [action("start", "Start"), move, action("end", "Close")]
+    elif phase == "active":
         actions = [action("stop", "Stop"), move]
     elif phase == "rate":
         actions = [action("intensity", "Intensity"), move]
@@ -25,6 +28,8 @@ def build_notification(view, entry_id, path, public=False, title="Contraction Tr
              f"Avg interval: {clock(hour.get('interval'))}",
              f"Avg length: {clock(hour.get('duration'))}", "",
              f"• {hour.get('count', 0)} contractions · past hour"]
+    if idle:
+        lines.insert(0, "Recording ended after inactivity. Start begins a new session.")
     if last:
         lines.append(f"• Intensity: {last['intensity']}")
     if view.get("location", {}).get("source") == "automatic":
@@ -47,8 +52,8 @@ def build_notification(view, entry_id, path, public=False, title="Contraction Tr
         "sticky": True, "alert_once": True, "notification_icon": "mdi:baby-face-outline",
         "icon_url": f"{STATIC_URL}/icon.png", "clickAction": path,
         "visibility": "public" if public else "private",
-        "chronometer": phase == "active" or view["e"] > 0,
-        "when": view["s"] if phase == "active" else view["e"],
+        "chronometer": not idle and (phase == "active" or view["e"] > 0),
+        "when": 0 if idle else view["s"] if phase == "active" else view["e"],
         "actions": actions,
     }}
     if not payload["data"]["when"]:
