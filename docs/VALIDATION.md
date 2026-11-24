@@ -276,5 +276,23 @@ No alert is a clinical assessment of movement or wellbeing.
 
 The header text is centred independently of its decorative icon; the phone icon
 is replaced by an icon-only bell/refresh symbol. Screen-reader naming remains.
-Local results: 113 Python and 37 frontend tests passed. Fresh native CI,
-validators, deployment/restart and visual verification are pending.
+The [reminder/header CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45464334205)
+on commit `06c500f7d076add7d9a1c76a035f67e368f3493a` passed all five jobs:
+113 Python tests, 37 frontend tests, 27 native tests on each exact HA target,
+dependency checks, hassfest, HACS and release build. Upstream Python warnings
+remain visible, not suppressed.
+
+A normal Home Assistant backup completed before the stored-settings upgrade;
+no removed code rollback folders were recreated. Seven changed runtime files
+were deployed and the complete installed package was verified against source.
+Configuration validation passed. Following the approved restart (502 response)
+and 60-second grace period, Core reported RUNNING with the integration loaded.
+The existing record count and recent-history fingerprint were unchanged, with
+no persistence uncertainty. The previously Off reminder remained Off, requiring
+one explicit enable to establish future remembered opt-in.
+
+An authenticated 430-pixel screenshot confirmed the centred title, decorative
+icon, icon-only bell/refresh button and intact recording controls/history.
+The normal restored-session warning remained visible. Synthetic reminder and
+session tests were not run against the live ledger; physical-phone reminder
+delivery and pause/resume acceptance remain unverified.
