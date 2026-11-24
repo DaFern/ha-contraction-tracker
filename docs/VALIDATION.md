@@ -113,4 +113,23 @@ Still required for catalog submission and stronger compatibility claims:
 - Continued review of privacy, record-deletion/export limitations and safety
   wording. No labour-stage, dilation or fetal-wellbeing determination is made.
 
+## Catalog and expanded lifecycle verification
+
+Follow-up CI adds official hassfest and HACS integration validation with no
+ignored checks, plus the isolated suite in `tests/ha/test_lifecycle.py` on both HA
+targets. It covers real setup/services/panels/assets, authorized history,
+unload/reload state recovery, options, multiple entries, scoped removal and
+startup/event failure boundaries. The integration's setup/unload functions are
+not mocked; test records and phone services are synthetic.
+
+At the point of adding these jobs/tests, their results are **pending**, not
+assumed passed. Validator or lifecycle failures must be reported before any
+runtime fixes are made. Neither the existing beta tag nor the live integration
+is changed by adding these checks.
+
+Even a green run does not establish a whole Core process reboot, real-browser
+rendering/accessibility, actual Android notification delivery or physical-device
+offline/reconnect behavior. Those remain separate acceptance work, and a green
+HACS action does not itself make a catalog submission.
+
 See [TESTING.md](TESTING.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).

@@ -48,12 +48,46 @@ the declared 2026.11 minimum. Do not force newer HA over that dependency pin.
 and the official package's recommended `-p no:respx` bootstrap setting. Existing
 fixture names remain compatible; no tests are skipped or assertions weakened.
 The native suite covers setup forms, authorization adapter branches and real
-public-Store verification/failure behavior, not complete runtime lifecycle.
+public-Store verification/failure behavior.
 
-Full setup/unload/reload, HTTP static-path serving, actual sidebar registration,
-sensor naming/renaming, multi-entry leases, broader storage recovery and mobile-event
-delivery must additionally be exercised in a native HA instance before release.
-Compilation or mocked component tests do not establish these behaviours.
+## Isolated clean-install and lifecycle suite
+
+`tests/ha/test_lifecycle.py` runs with the official disposable HA fixtures on both
+matrix versions. It does not patch the integration's setup/unload functions.
+Only the explicit panel-registration failure case injects a failing dependency.
+Storage is handled through public Store APIs backed by the official test backend.
+All entries, records, users and phone services in these tests are synthetic.
+
+The suite checks:
+
+- Fresh native setup without helper/to-do entities or a legacy frontend resource.
+- Actual sensor/service and sidebar-panel registration, and bundled HTTP assets.
+- Authorized native WebSocket panel/history access.
+- Public-Store preservation and new runtime reconstruction after unload/reload
+  in off, rest, active and awaiting-rating phases.
+- Options-flow reload with preserved records and private-by-default phone payloads.
+- Multiple entries, independent histories, shared module leases and panel cleanup.
+- Removal of only the selected entry's store.
+- Cleanup after a failed panel registration and refusal to reset invalid logical state.
+- Actual phone-event dispatch with anonymous, wrong-tag and stale-action refusal.
+
+These are automated fixture-based integration tests, not a fresh OS installation
+or rendered-browser/device acceptance. An unload/reload reconstruction is not a
+whole Core process reboot. Physical delivery, lock-screen behavior, device
+background restrictions, real network loss/reconnect and broader storage recovery
+still need separate acceptance. Passing HTML/JS HTTP responses does not prove
+browser execution, touch interaction or accessibility.
+
+## Distribution validators
+
+CI runs the official `home-assistant/actions/hassfest` action and
+`hacs/action` with category `integration` and **no ignored checks**. The HACS action
+uses the repository/catalog validation code; passing it does not submit or add
+the repository to the Marketplace catalog. Its result is tied to the repository,
+branch/release and action behavior reported in that run.
+
+Record actual results before marking release gates complete. Do not repair a
+runtime defect by skipping a failing lifecycle test or disabling a validator.
 
 ## Manual acceptance checklist
 

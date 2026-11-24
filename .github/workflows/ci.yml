@@ -5,6 +5,22 @@ on:
 permissions:
   contents: read
 jobs:
+  hassfest:
+    name: "hassfest"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Validate integration metadata and resources"
+        uses: home-assistant/actions/hassfest@master
+  hacs:
+    name: "HACS / Marketplace validation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Validate catalog requirements without ignored checks"
+        uses: hacs/action@main
+        with:
+          category: "integration"
+          comment: "false"
   isolated-tests:
     runs-on: ubuntu-latest
     steps:

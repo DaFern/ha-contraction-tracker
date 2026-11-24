@@ -41,9 +41,14 @@ permission to publish any separate Android code, private snapshots or live data.
       This does not complete the broader lifecycle/clean-install checklist.
 - [ ] Complete isolated clean-install, browser, restart/offline and physical
       Android acceptance; distinguish these from the accepted owner deployment.
+      A new fixture-based setup/lifecycle suite is configured on both HA targets;
+      its results are pending and it is not a substitute for real browser,
+      complete process-reboot or physical-device/offline acceptance.
 - [ ] Review auth boundaries, storage validation, unload/reload and record deletion.
 - [ ] Review compatibility with the intended HACS/Marketplace version.
 - [ ] Run Home Assistant hassfest and the appropriate HACS/Marketplace validator.
+      Both official actions are configured with no ignored checks; record their
+      actual results before completing this gate.
 - [x] Initial beta CI passed on the published commit, but its native tests ran
       on HA 2026.10.4. Do not treat that as minimum/current-version validation.
 - [x] Confirm the official-package minimum/current matrix passes on pushed
