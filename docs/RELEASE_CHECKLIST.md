@@ -53,9 +53,11 @@ permission to publish any separate Android code, private snapshots or live data.
       with no ignored HACS checks. All 23 native tests passed on each HA target;
       standalone tests/build passed. Non-blocking categories and action-version
       warnings remain visible. The published beta tag/assets remain unchanged.
-      Approved follow-up category metadata and Node 24 action upgrades await
-      a fresh CI run; upstream HA/backoff Python warnings are documented separately
-      in [VALIDATION.md](VALIDATION.md), not suppressed.
+      Follow-up categories and Node 24 action upgrades passed all five jobs in
+      [run 45404659668](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45404659668)
+      on `265fd82`; categories/Node 20/punycode warnings are absent. Upstream
+      HA/backoff Python warnings are documented separately in
+      [VALIDATION.md](VALIDATION.md), not suppressed.
 - [x] Initial beta CI passed on the published commit, but its native tests ran
       on HA 2026.10.4. Do not treat that as minimum/current-version validation.
 - [x] Confirm the official-package minimum/current matrix passes on pushed

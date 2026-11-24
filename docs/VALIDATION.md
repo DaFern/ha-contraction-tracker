@@ -176,7 +176,12 @@ a newly published release artifact or authorize deployment/catalog submission.
 The approved source follow-up adds manifest categories `helpers` and
 `health_wellbeing`, and upgrades GitHub Actions to checkout `v7.0.1`,
 setup-python `v7.1.0` and setup-node `v7.1.0`, all using Node 24.
-Fresh CI results for these changes are pending; no warning filters or dependency
+The [warning-cleanup CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45404659668)
+on commit `265fd82ca9a7752a4071809aebf158f66e5014d8` passed all five jobs.
+The missing-categories, Node 20 and action `punycode` warnings are absent.
+Hassfest and HACS passed without ignored checks; both HA targets passed all
+23 native tests and dependency checks. All 92 Python and 31 frontend tests,
+asset checks and the release build passed. No warning filters or dependency
 overrides were added.
 
 The five native Python warnings per target come from upstream code: one
