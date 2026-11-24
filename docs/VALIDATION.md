@@ -212,7 +212,21 @@ independently verifies this write before reconciling overdue idle state. Idle
 closure itself also requires verified persistence before publishing/notifying.
 Existing manually closed sessions do not acquire a notification on upgrade.
 
-Local results: 102 Python tests and 32 frontend tests passed. Native minimum/
-current CI, hassfest and HACS results are pending. Deployment/restart verification
-is not yet complete. The published 0.5.0b1 tag/assets remain unchanged; 0.5.0b2
-has not been published as a GitHub release.
+The [idle-session CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45407772869)
+on commit `f54e463c7cd0e734673054626c350ad68f4c8451` passed all five jobs:
+102 Python unit tests, 32 frontend tests, 25 native tests on each of HA
+2026.11.0/2026.11.3 with clean dependency checks, hassfest, HACS and release build.
+The two added native cases cover downtime reconciliation and authenticated
+notification Start/Close while preserving the full synthetic ledger.
+
+After owner approval, the installed copy was backed up, the committed runtime
+was deployed and byte-verified, and the configuration check passed. The restart
+request returned 502; after the required 60-second grace period, Core reported
+RUNNING on HA 2026.11.1 with the integration loaded and Supervisor healthy.
+The pre-existing record count and recent-history fingerprint were unchanged.
+An authenticated mobile-width screenshot showed the paused tracker and existing
+history. No synthetic contractions or phone actions were sent to the live ledger.
+Physical-phone timeout/Start/Close acceptance remains unverified.
+
+The published 0.5.0b1 tag/assets remain unchanged; 0.5.0b2 has not been published
+as a GitHub release. Deployment is not catalog approval or clinical validation.
