@@ -149,8 +149,13 @@ HACS passed again without ignored checks, with a non-blocking missing-categories
 warning. Hassfest still failed on manifest ordering and retained its schema
 warning; the overall workflow therefore failed. No runtime fix was applied.
 
-Validator/runtime failures are reported before runtime fixes are made. Neither
-the existing beta tag nor the live integration is changed by adding these checks.
+With owner approval, the source manifest keys are now ordered `domain`, `name`,
+then alphabetically, and `__init__.py` declares
+`CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)`, matching its UI-only
+setup. The tracking, storage and notification logic is unchanged. Validation of
+these two fixes is pending a new CI run; the earlier failing results remain
+historical evidence, not a pass. The published beta tag/assets and installed
+integration remain unchanged.
 
 Even a green run does not establish a whole Core process reboot, real-browser
 rendering/accessibility, actual Android notification delivery or physical-device

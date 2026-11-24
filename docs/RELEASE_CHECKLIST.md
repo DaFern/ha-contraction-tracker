@@ -50,8 +50,8 @@ permission to publish any separate Android code, private snapshots or live data.
 - [ ] Run Home Assistant hassfest and the appropriate HACS/Marketplace validator.
       HACS passed with no ignored checks in
       [run 45301147034](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45301147034).
-      Hassfest is blocked by manifest ordering and also reports a missing
-      config-entry-only schema declaration warning; runtime fixes need approval.
+      Approved manifest ordering and config-entry-only schema fixes are in the
+      source repository; a fresh hassfest/CI result is pending.
 - [x] Initial beta CI passed on the published commit, but its native tests ran
       on HA 2026.10.4. Do not treat that as minimum/current-version validation.
 - [x] Confirm the official-package minimum/current matrix passes on pushed

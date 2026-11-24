@@ -29,6 +29,7 @@ from .location import resolve as resolve_location
 from .migration import read_source
 
 _LOGGER = logging.getLogger(__name__)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = [Platform.SENSOR]
 
 
