@@ -258,7 +258,7 @@ class Tracker:
             return None
         state = self._state
         identity = (state["session_id"], state["n"], state["s"])
-        delay = max(0, state["s"] + LONG_CONTRACTION_SECONDS + 1 - int(self._clock()))
+        delay = max(0, state["s"] + LONG_CONTRACTION_SECONDS + 1 - self._clock())
         return identity, delay
 
     async def check_long_contraction(self, identity):

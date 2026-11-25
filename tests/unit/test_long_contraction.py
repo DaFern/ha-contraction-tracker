@@ -62,6 +62,26 @@ class LongContractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.alerts, [])
         self.assertEqual(self.disk, disk)
 
+    async def test_fractional_scheduling_keeps_the_same_absolute_deadline(self):
+        for fraction in (0.0, 0.2, 0.8, 0.999):
+            with self.subTest(fraction=fraction):
+                tracker = await self.make_tracker()
+                before = deepcopy(self.disk)
+                self.now = 1000 + fraction
+                identity, delay = tracker.long_warning_schedule()
+                self.assertAlmostEqual(delay, 121 - fraction, places=7)
+                self.assertAlmostEqual(self.now + delay, 1121, places=7)
+                self.now = 1120.999
+                await tracker.check_long_contraction(identity)
+                self.assertEqual(self.alerts, [])
+                self.assertEqual(self.disk, before)
+                self.now = 1121
+                await tracker.check_long_contraction(identity)
+                self.assertEqual(len(self.alerts), 1)
+                self.assertEqual(self.disk, {**before, "long_warning_attempted": True})
+                self.assertEqual(tracker.view()["k"], before["k"])
+                self.assertEqual(tracker.history(), [])
+
     async def test_overdue_restart_schedules_one_immediate_attempt(self):
         tracker = await self.make_tracker()
         disk = deepcopy(self.disk)

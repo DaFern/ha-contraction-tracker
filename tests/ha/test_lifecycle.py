@@ -456,9 +456,11 @@ async def test_reminder_preference_upgrade_and_pause_reload_resume_preserve_reco
     assert final["records"] == state["records"]
 
 
+@pytest.mark.parametrize("fraction", [0.0, 0.2, 0.8, 0.999])
 async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_stop(
-    hass, hass_admin_user, freezer, frozen_tracker_clock
+    hass, hass_admin_user, freezer, frozen_tracker_clock, fraction
 ):
+    freezer.move_to(datetime.fromtimestamp(int(time.time()) + fraction, UTC))
     calls = []
     async def phone(call):
         calls.append(deepcopy(dict(call.data)))
@@ -475,6 +477,7 @@ async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert alerts() == []
+    assert await stored(hass, entry) == before
     freezer.move_to(datetime.fromtimestamp(before["s"] + 121, UTC))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()

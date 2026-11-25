@@ -357,3 +357,19 @@ inactive. No synthetic contraction or alert was sent to the live installation.
 Physical-phone warning delivery and an actual threshold crossing remain
 unverified on the live installation. No published release, tag or download
 was changed.
+
+### Fractional-second deadline regression
+
+The [activation-evidence run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45597317787)
+on `ef561aa` subsequently failed one threshold test on HA 2026.11.0, despite the
+two preceding green runs. Investigation reproduced a real subsecond scheduling
+error: calculating the delay from an integer-truncated current clock placed the
+callback up to almost one second after the intended recorded-start + 121-second
+deadline. This was not solely a fixture issue.
+
+With owner approval, the delay now uses the full-precision current clock.
+The recorded start, strict over-120-second guard, attempt policy and Stop token
+are unchanged. Unit and native cases cover scheduling offsets 0, 0.2, 0.8 and
+0.999 seconds, retaining the no-early-warning and exactly-one-attempt assertions.
+Fresh CI results are pending. This correction is source-only; no deployment or
+restart is authorized as part of this follow-up.
