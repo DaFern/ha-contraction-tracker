@@ -71,6 +71,35 @@ An uncertain or failed phone delivery is not retried automatically: a warning
 can consequently be missed. This is intentional duplicate prevention, not
 evidence of successful delivery. The banner remains independent of that marker.
 
+### Warning cleanup and delayed delivery
+
+The source follow-up gives each contraction a stable, opaque warning tag derived
+from its session, number and recorded start. It is not an authentication token.
+Ordinary active updates and refreshes do not send warning-clear messages, before
+or after the threshold. Cleanup requires a claimed attempt and a verified
+completed record for that contraction; a temporary off presentation during
+active-timer unload/reload is not completion. An old contraction's delayed clear
+cannot remove a later contraction's newly tagged warning.
+
+Existing pre-upgrade warning Stop buttons retain their legacy tag handling, but
+still require native user authorization and the valid current Stop token.
+Both warning-tag forms allow only Stop; stale per-contraction tags and stale
+tokens are rejected. After completion, cleanup also retires the old entry-wide
+warning tag. No storage migration, timing edits or extra automatic alert attempts
+are introduced.
+
+This addresses an ordering race in warning cleanup; it does **not** guarantee
+FCM ordering, immediate arrival or reliable lock-screen/sound behavior. A
+main-notification snapshot can still arrive late. A warning could also arrive
+after its own end/clear, or be missed; those transport limits are not eliminated
+by isolating tags. Stale controls must not affect a subsequent contraction.
+Phone history showing a warning and clear messages in one delayed batch supports
+investigating this race, but without each message's tag it does not prove which
+clear removed a particular visible warning.
+
+The follow-up remains source-only until separately approved deployment/restart;
+automated queue simulation is not physical-phone delivery acceptance.
+
 The app cannot distinguish a genuinely continuing contraction from a timer left
 running, diagnose hyperstimulation, assess fetal wellbeing or guarantee alerts
 through outages or phone notification restrictions. Never wait for an alert if

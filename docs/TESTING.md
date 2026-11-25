@@ -176,6 +176,28 @@ consuming hours. The exact official HA/test-package pins and `pip check` remain.
 The corrected native run must confirm this test-sequencing diagnosis; it is not
 evidence that production cooldown behavior was faulty or has been changed.
 
+### Warning cleanup ordering follow-up
+
+`tests/unit/test_warning_cleanup.py` checks stable bounded per-contraction tags,
+no pre-threshold or active warning clears, completed-record-only cleanup,
+zero-duration boundary/unload presentations, and every delivery permutation of
+a new warning plus the previous contraction's cleanup/legacy retirement.
+The visible-notification dictionary models exact-tag replacement/removal only;
+it is not an Android/FCM emulator or transport delivery proof.
+
+Native lifecycle coverage captures the real adapter's notification-service
+payloads, then delivers early/previous clears after the warnings. It also checks
+active reload preservation, one persisted warning attempt, subsequent contraction
+isolation, unchanged verified records/tokens, stale/anonymous warning actions
+and authorized legacy Stop compatibility. The four existing fractional-deadline
+cases use the new tag while retaining the full threshold/reload/phone-Stop checks.
+
+Local checks passed 148 Python unit tests, 42 frontend tests and release
+validation. The follow-up native matrix must pass before any deployment.
+No live timer, record, notification or installed integration is changed by
+these isolated checks; source changes alone do not repair an installed phone
+notification. See [warning cleanup limits](CONTACT_PROMPTS.md#warning-cleanup-and-delayed-delivery).
+
 The no-phone unit expectation now requires scheduled **state evaluation**, not
 no schedule: the deadline must publish the over-two-minute state with no
 notification marker write. Clock rollback tests retain the one-phone-attempt

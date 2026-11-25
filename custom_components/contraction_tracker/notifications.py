@@ -1,5 +1,8 @@
 """Android-first notification presentation. No external image hosts."""
 
+from hashlib import sha256
+import json
+
 from .const import LONG_CONTRACTION_WARNING, STATIC_URL
 
 
@@ -78,13 +81,36 @@ def build_warning(view, entry_id, path, public=False):
                       "clickAction": path, "priority": "high", "ttl": 0}}
 
 
+def long_warning_tag(view, entry_id):
+    """Stable per-contraction identity, not an authentication/concurrency token."""
+    identity = json.dumps([view["session_id"], view["n"], view["s"]], separators=(",", ":"))
+    suffix = sha256(identity.encode()).hexdigest()[:32]
+    return f"contraction_tracker_long_{entry_id}_{suffix}"
+
+
+def long_warning_cleanup_tags(view, entry_id):
+    """Clear only a claimed warning whose contraction has actually completed.
+
+    Never enqueue a pre-threshold clear for the current warning. Shutdown uses
+    an off presentation even for an active timer, so require a completed record,
+    not just the presentation phase. Old clears cannot target later contractions.
+    """
+    last = view.get("last_record")
+    if (view["p"] == "active" or not view.get("long_warning_attempted") or not last
+            or any(last.get(key) != value for key, value in (
+                ("session_id", view["session_id"]), ("number", view["n"]), ("start", view["s"])))):
+        return []
+    # Retire the pre-upgrade entry-wide warning only after completion too.
+    return [long_warning_tag(view, entry_id), f"contraction_tracker_long_{entry_id}"]
+
+
 def build_long_warning(view, entry_id, path, public=False):
     """A timer check, not a diagnosis; normal Android delivery restrictions apply."""
     return {
         "title": "Contraction timer over 2 minutes",
         "message": LONG_CONTRACTION_WARNING,
         "data": {
-            "tag": f"contraction_tracker_long_{entry_id}",
+            "tag": long_warning_tag(view, entry_id),
             "channel": "Contraction timer warnings",
             "importance": "high", "priority": "high", "ttl": 0,
             "visibility": "public" if public else "private",

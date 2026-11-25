@@ -34,6 +34,7 @@ from custom_components.contraction_tracker.const import (
 )
 from custom_components.contraction_tracker.model import InvalidCommand, new_state, transition
 from custom_components.contraction_tracker.manager import Tracker
+from custom_components.contraction_tracker.notifications import long_warning_tag
 
 
 @pytest.fixture(autouse=True)
@@ -469,7 +470,7 @@ async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_
     await command(hass, entry, "show")
     await command(hass, entry, "start")
     before = await stored(hass, entry)
-    tag = f"contraction_tracker_long_{entry.entry_id}"
+    tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
     def alerts():
         return [c for c in calls if c.get("data", {}).get("tag") == tag
                 and c.get("message") != "clear_notification"]
@@ -521,7 +522,7 @@ async def test_unload_cancels_long_warning_and_overdue_setup_recovers_one_attemp
     freezer.move_to(datetime.fromtimestamp(before["s"] + 180, UTC))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    tag = f"contraction_tracker_long_{entry.entry_id}"
+    tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
     def alerts():
         return [c for c in calls if c.get("data", {}).get("tag") == tag
                 and c.get("message") != "clear_notification"]
@@ -546,3 +547,112 @@ async def test_schema_seven_upgrade_keeps_active_timing_and_records(hass):
     await hass.async_block_till_done()
     assert await stored(hass, entry) == {**state, "schema": 8, "long_warning_attempted": False}
     assert entry.runtime_data.tracker.view()["p"] == "active"
+
+
+async def test_real_notification_queue_survives_delayed_early_and_previous_clears(
+    hass, freezer, frozen_tracker_clock
+):
+    """Capture real adapter sends, then deliver them in hostile phone order."""
+    calls = []
+    async def phone(call):
+        calls.append(deepcopy(dict(call.data)))
+    hass.services.async_register("notify", "mobile_app_reordered_test", phone)
+    entry = await setup_entry(hass, notification="notify.mobile_app_reordered_test")
+    await command(hass, entry, "show")
+    await command(hass, entry, "start")
+    await command(hass, entry, "notify")
+    before = deepcopy(await stored(hass, entry))
+    first_tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
+    legacy_tag = f"contraction_tracker_long_{entry.entry_id}"
+    early = deepcopy(calls)
+    assert not any(item.get("message") == "clear_notification" and
+                   item["data"]["tag"] in (first_tag, legacy_tag) for item in early)
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 121, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    first_warning = next(item for item in calls
+                         if item.get("data", {}).get("tag") == first_tag
+                         and item["message"] != "clear_notification")
+    def deliver(visible, payload):
+        tag = payload.get("data", {}).get("tag")
+        if payload["message"] == "clear_notification":
+            visible.pop(tag, None)
+        else:
+            visible[tag] = payload
+    visible = {}
+    deliver(visible, first_warning)
+    for payload in reversed(early):
+        deliver(visible, payload)
+    assert first_tag in visible
+    assert await stored(hass, entry) == {**before, "long_warning_attempted": True}
+    # Unload must not erase an active warning that will not be sent again.
+    mark = len(calls)
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id) == first_tag
+    assert not any(item["message"] == "clear_notification" and
+                   item["data"]["tag"] in (first_tag, legacy_tag) for item in calls[mark:])
+    assert sum(item.get("data", {}).get("tag") == first_tag and
+               item["message"] != "clear_notification" for item in calls) == 1
+    mark = len(calls)
+    await command(hass, entry, "stop")
+    stopped = await stored(hass, entry)
+    assert stopped["records"][0]["duration"] == 121
+    previous_clears = [item for item in calls[mark:] if item["message"] == "clear_notification"]
+    assert any(item["data"]["tag"] == first_tag for item in previous_clears)
+    await command(hass, entry, "Mild")
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 180, UTC))
+    await command(hass, entry, "start")
+    second = deepcopy(await stored(hass, entry))
+    second_tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
+    assert second_tag != first_tag
+    freezer.move_to(datetime.fromtimestamp(second["s"] + 121, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    second_warning = next(item for item in calls
+                          if item.get("data", {}).get("tag") == second_tag
+                          and item["message"] != "clear_notification")
+    deliver(visible, second_warning)
+    for payload in reversed(previous_clears):
+        deliver(visible, payload)
+    assert second_tag in visible and first_tag not in visible
+    assert await stored(hass, entry) == {**second, "long_warning_attempted": True}
+
+
+async def test_warning_stop_tags_reject_stale_and_unauthorized_actions_but_accept_legacy_stop(
+    hass, hass_admin_user
+):
+    entry = await setup_entry(hass)
+    await command(hass, entry, "show")
+    await command(hass, entry, "start")
+    first = deepcopy(await stored(hass, entry))
+    stale_tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
+    await command(hass, entry, "stop")
+    await command(hass, entry, "Mild")
+    await command(hass, entry, "start")
+    before = deepcopy(await stored(hass, entry))
+    current_tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
+    legacy_tag = f"contraction_tracker_long_{entry.entry_id}"
+    for supplied_tag, context, action, token in (
+        (stale_tag, Context(user_id=hass_admin_user.id), "stop", before["k"]),
+        (current_tag, Context(), "stop", before["k"]),
+        (current_tag, Context(user_id=hass_admin_user.id), "stop", first["k"]),
+        (current_tag, Context(user_id=hass_admin_user.id), "movement", before["movement"]["k"]),
+        (legacy_tag, Context(user_id=hass_admin_user.id), "movement", before["movement"]["k"]),
+    ):
+        hass.bus.async_fire(
+            "mobile_app_notification_action",
+            {"tag": supplied_tag, "action": f"CT|{entry.entry_id}|{action}|{token}"},
+            context=context,
+        )
+        await hass.async_block_till_done()
+        assert await stored(hass, entry) == before
+    hass.bus.async_fire(
+        "mobile_app_notification_action",
+        {"tag": legacy_tag, "action": f"CT|{entry.entry_id}|stop|{before['k']}"},
+        context=Context(user_id=hass_admin_user.id),
+    )
+    await hass.async_block_till_done()
+    after = await stored(hass, entry)
+    assert after["p"] == "rate"
+    assert len(after["records"]) == len(before["records"]) + 1

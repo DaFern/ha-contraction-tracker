@@ -24,7 +24,10 @@ from .const import (
 )
 from .manager import PersistenceError, Tracker, verified_save
 from .model import InvalidCommand, InvalidStorage, load_state
-from .notifications import build_long_warning, build_notification, build_rating, build_warning
+from .notifications import (
+    build_long_warning, build_notification, build_rating, build_warning,
+    long_warning_cleanup_tags, long_warning_tag,
+)
 from .location import resolve as resolve_location
 from .migration import read_source
 
@@ -201,10 +204,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                                        payload, blocking=True)
         for tag in ([f"contraction_tracker_rating_{entry.entry_id}"] if view["p"] != "rate" else []) + (
             [f"contraction_tracker_movement_{entry.entry_id}"] if not view["movement"]["enabled"] or not view["movement"]["last_alert"] else []
-        ) + (
-            [f"contraction_tracker_long_{entry.entry_id}"]
-            if view["p"] != "active" or not view["long_warning_attempted"] else []
-        ):
+        ) + long_warning_cleanup_tags(view, entry.entry_id):
             await hass.services.async_call("notify", service.removeprefix("notify."),
                 {"message": "clear_notification", "data": {"tag": tag}}, blocking=True)
 
@@ -296,11 +296,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not isinstance(action, str) or not action.startswith(f"CT|{entry.entry_id}|"):
             return
         parts = action.split("|")
-        if len(parts) != 4 or event.data.get("tag") not in (
-            f"contraction_tracker_{entry.entry_id}", f"contraction_tracker_rating_{entry.entry_id}",
+        warning_tags = (
             f"contraction_tracker_long_{entry.entry_id}",
+            long_warning_tag(tracker.view(), entry.entry_id),
+        )
+        tag = event.data.get("tag")
+        if len(parts) != 4 or tag not in (
+            f"contraction_tracker_{entry.entry_id}", f"contraction_tracker_rating_{entry.entry_id}",
+            *warning_tags,
         ):
             return
+        if tag in warning_tags and parts[2] != "stop":
+            return  # Warning controls only stop; legacy tags retain token checks.
         try:
             await authorize(hass, event.context.user_id, entry.runtime_data)
             await tracker.command(parts[2], parts[3], received=int(event.time_fired.timestamp()))
