@@ -348,7 +348,12 @@ recent-history fingerprint were unchanged. A mobile-width screenshot confirmed
 the inactive tracker and retained layout/history; it did not simulate an active
 contraction or establish warning delivery. No synthetic live events were sent.
 
-The running backend still lacks the new warning-state field: **restart/activation
-is pending explicit approval**. Stored schema upgrade, post-restart checks and
-physical-phone warning delivery are not yet verified on the live installation.
-No published release, tag or download was changed.
+The owner then explicitly approved activation. The restart call returned 502;
+after the required 60-second grace period, Core reported RUNNING and Supervisor
+healthy. The tracker exposed its new warning-state field with no persistence
+uncertainty, confirming the upgraded backend loaded. The pre-existing record
+count and recent-history fingerprint were unchanged, and the tracker stayed
+inactive. No synthetic contraction or alert was sent to the live installation.
+Physical-phone warning delivery and an actual threshold crossing remain
+unverified on the live installation. No published release, tag or download
+was changed.
