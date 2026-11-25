@@ -333,4 +333,22 @@ the Tracker's default clock function had been captured at module import.
 The test correction explicitly injects a clock that follows the freezer into
 the real Tracker, including on reload. HA's scheduler, setup/unload, persistence
 and all warning assertions remain unchanged; no runtime code, thresholds or
-checks are changed or skipped. Rerun results are pending. Deployment is blocked.
+checks are changed or skipped.
+
+The [corrected-clock CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45596103337)
+on commit `d512d681105e130ec556972be41740e1e7e51621` passed all five jobs:
+125 Python unit tests, 39 frontend tests, all 30 native tests on each of HA
+2026.11.0 and 2026.11.3, exact-version/dependency checks, hassfest, HACS and the
+release build. No runtime change was needed to correct the fixture clock.
+
+After this green run and completion of a normal HA backup, the eight changed
+runtime files were deployed. All 23 installed runtime files matched the tested
+source bytes. Configuration validation passed. The existing record count and
+recent-history fingerprint were unchanged. A mobile-width screenshot confirmed
+the inactive tracker and retained layout/history; it did not simulate an active
+contraction or establish warning delivery. No synthetic live events were sent.
+
+The running backend still lacks the new warning-state field: **restart/activation
+is pending explicit approval**. Stored schema upgrade, post-restart checks and
+physical-phone warning delivery are not yet verified on the live installation.
+No published release, tag or download was changed.
