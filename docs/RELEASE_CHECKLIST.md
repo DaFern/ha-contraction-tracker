@@ -1,5 +1,27 @@
 # Public beta and catalog release checklist
 
+## Beta 0.5.0b2 preparation
+
+The owner approved preparation and publication as a **prerelease**. Beta-1's tag
+and downloads must remain unchanged. Marketplace submission is not approved.
+
+- [x] Runtime manifest/constants `0.5.0b2`; npm `0.5.0-beta.2`.
+- [x] Runtime source `79357fe` passed all five jobs in
+      [CI 45708091239](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45708091239):
+      148 Python, 42 frontend and 66 native cases per exact HA target.
+- [x] Approved owner deployment/restart recovered; owner confirmed the phone fix.
+- [x] Reviewed tracked paths and scanned source for private records, identifiers,
+      snapshots and credential-shaped values. Reviewed scanner matches: the
+      browser runner's generic cache-path fallback and the release validator's
+      forbidden household-reference literals are tooling, not private records.
+- [x] ZIP contains only 27 runtime files; each matches release source. Two builds
+      produced identical bytes. Checksum and size appear in the release notes.
+- [x] Release notes disclose remaining clean-install/offline/device limits.
+
+The publication record is the GitHub prerelease and its immutable target tag;
+do not treat this preparation checklist as proof that an upload has completed.
+The checklist below retains the historical beta-1 evidence and broader gates.
+
 ## Approved product and licensing decisions
 
 - [x] Public Home Assistant integration: `DaFern/ha-contraction-tracker`.

@@ -204,7 +204,15 @@ The updated unload-recovery test tried to read `entry.runtime_data` after HA had
 correctly removed it. The test now derives the warning tag from its captured,
 verified stored-state snapshot, retaining every unload/overdue/one-attempt
 assertion. No additional runtime change was needed for that test correction.
-Fresh native results remain pending.
+The corrected follow-up `79357fe` passed all five jobs in
+[run 45708091239](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45708091239):
+148 Python unit tests, 42 frontend tests and 66 native cases on each exact HA
+target (2026.11.0 and 2026.11.3), dependency consistency, hassfest, HACS validation
+and release build. Each native target retained five upstream warnings.
+The separately approved deployment/restart recovered with the tracker loaded
+and save/delivery diagnostics clear; the owner subsequently confirmed the phone
+fix worked. This is specific owner acceptance, not exhaustive fresh-install,
+offline/reconnect, Android-device or medical validation.
 
 The no-phone unit expectation now requires scheduled **state evaluation**, not
 no schedule: the deadline must publish the over-two-minute state with no

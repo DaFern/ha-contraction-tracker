@@ -97,8 +97,9 @@ Phone history showing a warning and clear messages in one delayed batch supports
 investigating this race, but without each message's tag it does not prove which
 clear removed a particular visible warning.
 
-The follow-up remains source-only until separately approved deployment/restart;
-automated queue simulation is not physical-phone delivery acceptance.
+The follow-up is included in beta 0.5.0b2. The owner accepted the deployed phone
+fix after restart; automated queue simulation is not exhaustive physical-phone
+delivery acceptance.
 
 The app cannot distinguish a genuinely continuing contraction from a timer left
 running, diagnose hyperstimulation, assess fetal wellbeing or guarantee alerts

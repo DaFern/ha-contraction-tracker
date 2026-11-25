@@ -4,7 +4,8 @@ A calm, phone-first contraction logger for Home Assistant: one shared timer,
 actionable Android notifications and a compact app-style card with expandable
 patterns and history.
 
-**0.5.0b2 · development candidate.** Published beta: **0.5.0b1**.
+**0.5.0b2 · public beta prerelease.** See the
+[release notes and verification limits](docs/releases/0.5.0b2.md).
 
 This integration is offered for public testing, with HACS/Marketplace distribution intended.
 Its directory layout is compatible with those tools; catalog inclusion has not
@@ -81,7 +82,7 @@ tests or isolated fresh-install checks have passed.
   When upgrading, an existing Off remains Off until enabled once.
 - Compact stats, live on-screen timer and collapsed detail/history accordions.
 - Revision guards against double taps and stale notifications.
-- Candidate native measurement/binary sensors and a verified Activity event
+- Native measurement/binary sensors and a verified Activity event
   entity for automations, preserving the existing Session sensor. Three optional
   starter blueprints cover calming sessions, partner updates and timer reminders.
   See [automation setup, privacy and timing limits](docs/AUTOMATIONS.md).
