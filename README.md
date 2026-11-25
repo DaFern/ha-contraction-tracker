@@ -81,6 +81,10 @@ tests or isolated fresh-install checks have passed.
   When upgrading, an existing Off remains Off until enabled once.
 - Compact stats, live on-screen timer and collapsed detail/history accordions.
 - Revision guards against double taps and stale notifications.
+- Candidate native measurement/binary sensors and a verified Activity event
+  entity for automations, preserving the existing Session sensor. Three optional
+  starter blueprints cover calming sessions, partner updates and timer reminders.
+  See [automation setup, privacy and timing limits](docs/AUTOMATIONS.md).
 - Saved transitions before publication; notification failure never rolls back
   recorded timings. Failed or unconfirmed saves are surfaced explicitly.
 - Private lock-screen content by default, with an explicit public-content option.

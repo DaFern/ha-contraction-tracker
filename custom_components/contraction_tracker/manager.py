@@ -1,6 +1,7 @@
 """Transactional application layer; deliberately independent of Home Assistant."""
 
 import asyncio
+from contextlib import asynccontextmanager
 from copy import deepcopy
 import logging
 import time
@@ -9,6 +10,7 @@ from .model import InvalidCommand, configure_guidance, correct, expire_idle, loa
 from .location import uncertain
 from .legacy import convert, digest, require_pristine, source_digest, summary as import_summary
 from .const import LONG_CONTRACTION_SECONDS
+from .activity import operation_activity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +48,9 @@ class Tracker:
         self._last_location = None
         self._lock = asyncio.Lock()
         self._listeners = set()
+        self._activity_listeners = set()
+        self._pending_activity = []
+        self._snapshot_cache = None
         self.notification_failed = False
         self.persistence_failed = False
         self.restored = data is not None and self._state["p"] != "off"
@@ -54,6 +59,7 @@ class Tracker:
         self.rating_notify = None
         self.warning_notify = None
         self.long_warning_notify = None
+        self._long_evaluated = None
 
     def view(self):
         now = int(self._clock())
@@ -63,7 +69,11 @@ class Tracker:
                 location = self._location_provider(self._state["guidance"], now) if self._location_provider else uncertain()
             except Exception:
                 location = uncertain()
-        result = snapshot(self._state, now, location)
+        cache = self._snapshot_cache
+        if cache is None or cache[0] is not self._state or cache[1] != now or cache[2] != location:
+            cache = (self._state, now, deepcopy(location), snapshot(self._state, now, location))
+            self._snapshot_cache = cache
+        result = deepcopy(cache[3])
         result.update(notification_failed=self.notification_failed,
                       persistence_failed=self.persistence_failed, restored=self.restored,
                       import_uncertain=self.import_uncertain,
@@ -73,6 +83,34 @@ class Tracker:
     def subscribe(self, listener):
         self._listeners.add(listener)
         return lambda: self._listeners.discard(listener)
+
+    def subscribe_activity(self, listener):
+        """Subscribe a synchronous adapter callback, not an automation action."""
+        self._activity_listeners.add(listener)
+        return lambda: self._activity_listeners.discard(listener)
+
+    @asynccontextmanager
+    async def _operation(self):
+        acquired = False
+        try:
+            async with self._lock:
+                acquired = True
+                yield
+        finally:
+            # No awaits between unlocking and delivery; preserve commit order.
+            pending = []
+            if acquired:
+                pending, self._pending_activity = self._pending_activity, []
+            for event in pending:
+                for listener in tuple(self._activity_listeners):
+                    try:
+                        listener(deepcopy(event))
+                    except Exception:
+                        _LOGGER.warning("A tracker activity subscriber failed")
+
+    def _record_activity(self, before, operation, occurred_at, record_id=None):
+        self._pending_activity.extend(operation_activity(
+            before, self._state, operation, occurred_at, record_id))
 
     def _publish(self):
         for listener in tuple(self._listeners):
@@ -97,7 +135,7 @@ class Tracker:
 
     async def command(self, command, token="", received=None):
         received = int(self._clock()) if received is None else received
-        async with self._lock:
+        async with self._operation():
             self._check_save_outcome()
             if self.closed:
                 raise InvalidCommand("This tracker is unloading. Refresh when it reconnects.")
@@ -112,7 +150,9 @@ class Tracker:
                     self._publish()
                 return self.view()
             if candidate != self._state:
+                before = self._state
                 await self._commit(candidate)
+                self._record_activity(before, command, received)
                 if command not in ("movement", "reminders_on", "reminders_off"):
                     self.restored = False
                 self._publish()
@@ -120,13 +160,16 @@ class Tracker:
             return self.view()
 
     async def edit(self, record_id, revision, start, end, intensity):
-        async with self._lock:
+        async with self._operation():
             self._check_save_outcome()
             if self.closed:
                 raise InvalidCommand("This tracker is unloading.")
-            candidate = correct(self._state, record_id, revision, start, end, intensity, int(self._clock()))
+            now = int(self._clock())
+            candidate = correct(self._state, record_id, revision, start, end, intensity, now)
             if candidate != self._state:
+                before = self._state
                 await self._commit(candidate)
+                self._record_activity(before, "correct", now, record_id)
                 self._publish()
                 await self._push()
             return self.view()
@@ -211,7 +254,7 @@ class Tracker:
 
     async def tick(self):
         """Age rolling-hour data without sending a push every minute."""
-        async with self._lock:
+        async with self._operation():
             if self.closed or self.persistence_uncertain or self.import_uncertain:
                 return
             try:
@@ -242,7 +285,9 @@ class Tracker:
         """Caller holds the lock; publish/notify only after verified persistence."""
         candidate = expire_idle(self._state, now)
         if candidate != self._state:
+            before = self._state
             await self._commit(candidate)
+            self._record_activity(before, "inactivity", now)
             self.restored = False
             self._publish()
             await self._push()
@@ -251,14 +296,17 @@ class Tracker:
         await self.command("notify")
 
     def long_warning_schedule(self):
-        """Return the current contraction identity and delay, never a clinical status."""
+        """Evaluate timer state even without a phone; never a clinical status."""
         if (self.closed or self.persistence_uncertain or self.import_uncertain
-                or self.long_warning_notify is None or self._state["p"] != "active"
-                or self._state["long_warning_attempted"]):
+                or self._state["p"] != "active"):
             return None
         state = self._state
         identity = (state["session_id"], state["n"], state["s"])
         delay = max(0, state["s"] + LONG_CONTRACTION_SECONDS + 1 - self._clock())
+        if delay == 0 and (self._long_evaluated == identity or state["long_warning_attempted"]):
+            return None
+        # Even an already-attempted warning can need a future state-only
+        # evaluation after clock rollback. It must never send a second alert.
         return identity, delay
 
     async def check_long_contraction(self, identity):
@@ -266,10 +314,14 @@ class Tracker:
         async with self._lock:
             state = self._state
             if (self.closed or self.persistence_uncertain or self.import_uncertain
-                    or self.long_warning_notify is None or state["p"] != "active"
-                    or state["long_warning_attempted"]
+                    or state["p"] != "active"
                     or identity != (state["session_id"], state["n"], state["s"])
                     or int(self._clock()) - state["s"] <= LONG_CONTRACTION_SECONDS):
+                return
+            self._long_evaluated = identity
+            # Publish derived state without claiming a nonexistent phone attempt.
+            self._publish()
+            if self.long_warning_notify is None or state["long_warning_attempted"]:
                 return
             candidate = deepcopy(state)
             candidate["long_warning_attempted"] = True
@@ -305,3 +357,4 @@ class Tracker:
             except Exception:
                 _LOGGER.warning("Notification cleanup could not be confirmed")
             self._listeners.clear()
+            self._activity_listeners.clear()

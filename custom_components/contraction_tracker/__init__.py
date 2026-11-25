@@ -30,7 +30,7 @@ from .migration import read_source
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.EVENT]
 
 
 @dataclass
@@ -41,6 +41,7 @@ class Runtime:
     store: Store
     panel_path: str
     settings: dict
+    activity_entity: object | None = None
 
 
 def get_runtime(hass: HomeAssistant, entry_id: str) -> Runtime:
@@ -242,7 +243,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             data = await verified_save(load_state(data), store.async_save, readback)
         tracker = Tracker(data, store.async_save, notify, location_provider=location_provider, readback=readback)
         # Reconcile elapsed downtime before exposing controls or old rest timers.
-        await tracker.tick()
+        startup_activity = []
+        remove_startup_listener = tracker.subscribe_activity(startup_activity.append)
+        try:
+            await tracker.tick()
+        finally:
+            remove_startup_listener()
         if tracker.persistence_uncertain:
             raise PersistenceError("Idle-session closure could not be verified.")
     except PersistenceError as err:
@@ -271,6 +277,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sidebar_icon="mdi:baby-face-outline", module_url=MODULE_URL,
             config={"entry_id": entry.entry_id}, require_admin=False,
         )
+        # A newly verified downtime closure is not a replay of saved history.
+        # All measurement entities are now registered with reconciled values.
+        if entry.runtime_data.activity_entity is not None:
+            for metadata in startup_activity:
+                entry.runtime_data.activity_entity.publish_activity(metadata)
     except Exception:
         # Failed setup must not leave a module lease or an active platform behind.
         await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

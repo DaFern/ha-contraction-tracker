@@ -31,6 +31,15 @@ the live adapter update remains staged and has not enabled detection.
 - Removing a tracker entry deletes its own
   local store. Existing HA backups and Recorder retention are outside its remit.
 - No bulk export or destructive history-clear service is shipped in the alpha.
+- The automation candidate adds separate measurements, coarse location/source,
+  diagnostic binary states and a native Activity event entity on the same device.
+  These follow normal HA read permissions and may be retained in Recorder,
+  event restore data, automation traces, exports or backups. No long-term
+  statistics state class is set. Activity excludes tokens, audit/original/import
+  data, coordinates and phone details, but IDs and timestamps remain sensitive.
+  Blueprints are opt-in and require the user's own actions/destinations; they
+  insert no health data into messages by default. Review retention and Recorder
+  exclusions separately; the integration does not change those settings.
 
 Before publishing an issue, remove any records, phone/user names, entity
 identifiers, domains, coordinates, credentials and unredacted screenshots.

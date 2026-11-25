@@ -88,6 +88,29 @@ browser execution, touch interaction or accessibility.
 
 ## Distribution validators
 
+### Native automation candidate
+
+`tests/ha/test_automation_entities.py` covers all 22 entities on one device,
+stable IDs/discovery compatibility, native units/timestamps, verified activity
+ordering, equal successive records, corrections, save uncertainty, per-entry
+isolation, disabled entities and cleanup. Four fractional offsets exercise the
+real deadline with no phone, including reload and unchanged storage. Startup
+inactivity closure is distinguished from restored event history.
+
+`tests/ha/test_blueprints.py` expands all three actual source blueprints using
+HA's Blueprint/BlueprintInputs and validates the expanded configurations with
+the native automation schema. It uses the real automation engine and disposable
+tracker services for start/end/rating selection, equal records, restoration
+filtering, real downtime closure, cooldown and timer Stop/reload cancellation.
+No production automation is created. The files join the existing exact-version
+CI matrix automatically via `pytest tests/ha -v`; definitions are not passing
+test evidence until that matrix has actually run.
+
+The no-phone unit expectation now requires scheduled **state evaluation**, not
+no schedule: the deadline must publish the over-two-minute state with no
+notification marker write. Clock rollback tests retain the one-phone-attempt
+policy while rearming derived state evaluation.
+
 `test_long_contraction.py` checks the strict two-minute boundary, verified
 one-attempt persistence, restart/downtime, stale callbacks, independent settings
 and movement, queued Stop receipt timing, no selected phone, delivery failure

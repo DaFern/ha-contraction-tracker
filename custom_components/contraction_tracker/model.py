@@ -302,8 +302,15 @@ def snapshot(state, now, location=None):
     result["location"] = (manual_location(state["guidance"]) if state["guidance"]["mode"] == "manual"
                           else location or uncertain_location())
     result["recommendation"] = recommendation(state, now, result["location"])
-    result["last_record"] = ({key: state["records"][-1][key] for key in ("duration", "intensity")}
-                             if state["records"] else None)
+    last = state["records"][-1] if state["records"] else None
+    result["last_record"] = ({key: last[key] for key in
+                             ("id", "session_id", "number", "start", "end", "duration", "intensity")}
+                            if last else None)
+    if last:
+        # Stored zero is also the legacy sentinel for a missing first interval.
+        result["last_record"].update(
+            interval=last["interval"] if last["number"] > 1 else None,
+            rest=last["rest"] if last["number"] > 1 else None)
     hour = [row for row in state["records"] if now - 3600 <= row["start"] <= now]
     starts = len(hour) + int(state["p"] == "active" and now - 3600 <= state["s"] <= now)
     eligible = [row["interval"] for row in hour
@@ -312,7 +319,8 @@ def snapshot(state, now, location=None):
         eligible.append(state["i"])
     mean = lambda values: int(sum(values) / len(values) + .5) if values else None
     result["hourly"] = {"count": starts, "duration": mean([row["duration"] for row in hour]),
-                        "interval": mean(eligible), "completed": len(hour)}
+                        "interval": mean(eligible), "completed": len(hour),
+                        "interval_samples": len(eligible)}
     result["summary"] = summarize([[row["start"], row["duration"], row["interval"],
                                    RATINGS.index(row["intensity"]) + 1 if row["intensity"] in RATINGS else 0]
                                   for row in hour[-6:]])

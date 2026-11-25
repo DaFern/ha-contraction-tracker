@@ -1,0 +1,72 @@
+blueprint:
+  name: "Contraction Tracker: partner update"
+  description: >
+    Opt-in private update actions on completion OR rating, never both. Completion
+    is initially Not rated; choose rating to wait for a rating (which may never
+    arrive). Select this tracker's Activity. You choose the recipient and message;
+    nothing is sent by default. Cooldown is in-memory and resets on reload.
+    This does not assess labour stage or whether it is safe to wait.
+  domain: automation
+  author: "Badger182"
+  homeassistant:
+    min_version: "2026.11.0"
+  input:
+    activity_entity:
+      name: "Tracker Activity"
+      selector:
+        entity:
+          filter:
+            domain: event
+            integration: contraction_tracker
+    update_when:
+      name: "Update on"
+      default: contraction_completed
+      selector:
+        select:
+          options:
+            - contraction_completed
+            - contraction_rated
+    cooldown_seconds:
+      name: "Minimum cooldown"
+      default: 300
+      selector:
+        number:
+          min: 0
+          max: 86400
+          step: 1
+          unit_of_measurement: "s"
+          mode: box
+    update_actions:
+      name: "Your private update actions"
+      description: "Choose a destination and message. The activity variable contains bounded event metadata."
+      selector:
+        action:
+mode: single
+max_exceeded: silent
+variables:
+  update_when: !input update_when
+triggers:
+  - trigger: state
+    entity_id: !input activity_entity
+    to:
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none and trigger.to_state is not none
+         and trigger.from_state.state != 'unavailable'
+         and not trigger.from_state.attributes.get('restored', false)
+         and trigger.to_state.state not in ['unknown', 'unavailable']
+         and not trigger.to_state.attributes.get('restored', false)
+         and trigger.to_state.state != trigger.from_state.state
+         and trigger.to_state.attributes.get('event_type') == update_when }}
+actions:
+  - variables:
+      activity: "{{ trigger.to_state.attributes }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ true }}"
+        sequence: !input update_actions
+    continue_on_error: true
+  - delay:
+      seconds: !input cooldown_seconds

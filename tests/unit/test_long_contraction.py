@@ -157,15 +157,44 @@ class LongContractionTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(model.InvalidCommand):
                 await tracker.command("stop", tracker.view()["k"])
 
-    async def test_no_selected_phone_does_not_claim_or_schedule_an_alert(self):
+    async def test_no_selected_phone_schedules_state_evaluation_without_claiming_an_alert(self):
         tracker = await self.make_tracker()
         identity, _ = tracker.long_warning_schedule()
         tracker.long_warning_notify = None
+        before = deepcopy(self.disk)
+        published = []
+        tracker.subscribe(lambda: published.append(tracker.view()["long_contraction"]))
         self.now = 1121
-        self.assertIsNone(tracker.long_warning_schedule())
+        self.assertEqual(tracker.long_warning_schedule(), (identity, 0))
         await tracker.check_long_contraction(identity)
         self.assertTrue(tracker.view()["long_contraction"])
+        self.assertEqual(published, [True])
         self.assertFalse(self.disk["long_warning_attempted"])
+        self.assertEqual(self.disk, before)
+        self.assertEqual(self.alerts, [])
+        self.assertIsNone(tracker.long_warning_schedule())
+
+    async def test_clock_rollback_rearms_state_only_evaluation_without_second_phone_attempt(self):
+        for phone in (False, True):
+            with self.subTest(phone=phone):
+                tracker = await self.make_tracker()
+                if not phone:
+                    tracker.long_warning_notify = None
+                identity, _ = tracker.long_warning_schedule()
+                self.now = 1121
+                await tracker.check_long_contraction(identity)
+                disk = deepcopy(self.disk)
+                self.now = 1100
+                self.assertFalse(tracker.view()["long_contraction"])
+                self.assertEqual(tracker.long_warning_schedule(), (identity, 21))
+                await tracker.check_long_contraction(identity)
+                self.assertEqual(self.disk, disk)
+                self.now = 1121
+                await tracker.check_long_contraction(identity)
+                self.assertTrue(tracker.view()["long_contraction"])
+                self.assertEqual(len(self.alerts), int(phone))
+                self.assertEqual(self.disk, disk)
+                self.assertIsNone(tracker.long_warning_schedule())
 
     async def test_settings_and_movement_do_not_duplicate_or_invalidate_warning_or_stop(self):
         tracker = await self.make_tracker()

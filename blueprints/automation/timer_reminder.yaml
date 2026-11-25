@@ -1,0 +1,74 @@
+blueprint:
+  name: "Contraction Tracker: timer reminder"
+  description: >
+    One optional reminder for a newly started contraction. Select Current
+    contraction started, not Last contraction ended. Stop, a new start or entity
+    unavailability cancels the pending run. Reload/restart cancels waiting and
+    does not catch up old timers. Choose an explicit reminder action. This never
+    stops a contraction, diagnoses labour or changes the built-in two-minute warning.
+  domain: automation
+  author: "Badger182"
+  homeassistant:
+    min_version: "2026.11.0"
+  input:
+    start_entity:
+      name: "Current contraction started"
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: timestamp
+            integration: contraction_tracker
+    reminder_seconds:
+      name: "Reminder after"
+      default: 180
+      selector:
+        number:
+          min: 1
+          max: 3600
+          step: 1
+          unit_of_measurement: "s"
+          mode: box
+    reminder_actions:
+      name: "Your reminder actions"
+      selector:
+        action:
+mode: restart
+variables:
+  start_entity: !input start_entity
+  reminder_seconds: !input reminder_seconds
+triggers:
+  - trigger: state
+    entity_id: !input start_entity
+    to:
+# No top-level condition: Stop/unavailability must cancel an existing run too.
+actions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none and trigger.to_state is not none
+         and trigger.from_state.state != 'unavailable'
+         and not trigger.from_state.attributes.get('restored', false)
+         and trigger.to_state.state not in ['unknown', 'unavailable']
+         and not trigger.to_state.attributes.get('restored', false)
+         and trigger.to_state.state != trigger.from_state.state
+         and as_timestamp(trigger.to_state.state, none) is not none }}
+  - variables:
+      started_at: "{{ trigger.to_state.state }}"
+  - wait_for_trigger:
+      - trigger: state
+        entity_id: !input start_entity
+        to:
+    timeout:
+      seconds: >-
+        {{ [0, reminder_seconds | float -
+           (as_timestamp(now()) - as_timestamp(started_at))] | max }}
+    continue_on_timeout: true
+  - condition: template
+    value_template: >-
+      {{ not wait.completed and states(start_entity) == started_at
+         and as_timestamp(now()) - as_timestamp(started_at) >= reminder_seconds | float }}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ true }}"
+        sequence: !input reminder_actions

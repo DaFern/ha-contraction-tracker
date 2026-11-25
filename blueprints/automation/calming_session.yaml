@@ -1,0 +1,56 @@
+blueprint:
+  name: "Contraction Tracker: calming session"
+  description: >
+    Opt-in convenience actions for verified session starts and ends. Select this
+    tracker's Activity event entity. End actions are explicit; no scene snapshot
+    is restored over changes you made yourself. This is not medical guidance.
+  domain: automation
+  author: "Badger182"
+  homeassistant:
+    min_version: "2026.11.0"
+  input:
+    activity_entity:
+      name: "Tracker Activity"
+      selector:
+        entity:
+          filter:
+            domain: event
+            integration: contraction_tracker
+    start_actions:
+      name: "Actions when a session starts"
+      selector:
+        action:
+    end_actions:
+      name: "Actions when a session ends"
+      description: "Choose explicit cleanup actions, not automatic state restoration."
+      selector:
+        action:
+mode: queued
+max: 10
+triggers:
+  - trigger: state
+    entity_id: !input activity_entity
+    to:
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none and trigger.to_state is not none
+         and trigger.from_state.state != 'unavailable'
+         and not trigger.from_state.attributes.get('restored', false)
+         and trigger.to_state.state not in ['unknown', 'unavailable']
+         and not trigger.to_state.attributes.get('restored', false)
+         and trigger.to_state.state != trigger.from_state.state
+         and trigger.to_state.attributes.get('event_type') in
+           ['session_started', 'session_ended'] }}
+actions:
+  - variables:
+      activity: "{{ trigger.to_state.attributes }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ activity.event_type == 'session_started' }}"
+        sequence: !input start_actions
+      - conditions:
+          - condition: template
+            value_template: "{{ activity.event_type == 'session_ended' }}"
+        sequence: !input end_actions
