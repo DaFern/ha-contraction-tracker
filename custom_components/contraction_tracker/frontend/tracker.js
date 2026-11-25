@@ -9,6 +9,7 @@ const icons = {
   menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
   notification: '<path d="M15 12V9a5 5 0 0 0-10 0v4l-2 3h9M8 19a2 2 0 0 0 3 0M21 14v4h-4M21 18a4 4 0 1 0-1 3"/>',
   baby: '<circle cx="12" cy="13" r="8"/><path d="M12 5c-3 0-2-4 1-3M8 12h.01M16 12h.01M9 16q3 3 6 0"/>',
+  coffee: '<path d="M4 8h12v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8ZM16 9h2a3 3 0 0 1 0 6h-2M8 3v2M12 3v2M3 22h16"/>',
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${icons[name]}</svg>`;
 const styleURL = new URL(`./tracker.css${assetQuery}`, import.meta.url).href;
@@ -465,8 +466,13 @@ export class ContractionTrackerAppCard extends HTMLElement {
       ${this._section("guidance", "Contact prompts & location", c?.guidance?.mode === "automatic" ? "Automatic" : locationNames[c?.guidance?.location] || "Not specified", guidanceUI)}
       ${this._section("history", "Detailed history", "Saved", history)}
       ${this._section("about", "About these timings", "", "<p>Requires Home Assistant and a working connection. Times use when the server receives controls, not the exact phone tap time.</p><p>Contractions alone cannot determine labour stage, dilation or when birth will occur. Follow your maternity team’s advice.</p><p>This is not a medical device. Keep a backup timer.</p>")}
-      <footer class="footer"><span>${offline ? "Disconnected" : "Connected to Home Assistant"}</span>
-      ${c?.p === "rest" ? `<button class="text-button" data-command="end" ${attrs}>Stop recording</button>` : '<span class="text-button">Logging aid only</span>'}</footer></article>${editor}`;
+      <footer><div class="footer"><span>${offline ? "Disconnected" : "Connected to Home Assistant"}</span>
+      ${c?.p === "rest" ? `<button class="text-button" data-command="end" ${attrs}>Stop recording</button>` : '<span class="text-button">Logging aid only</span>'}</div>
+      <section class="support" aria-label="Support development">
+        <div class="support-copy"><p>© 2026 Daniel Fern</p>
+        <p>If this project helps you, you can support its development.</p></div>
+        <a class="support-link" href="https://buymeacoffee.com/Badger182" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">${icon("coffee")}<span>Buy me a coffee</span></a>
+      </section></footer></article>${editor}`;
     this._minute = Math.floor(Date.now() / 60000);
     this._tick();
     const dialog = this.shadowRoot.querySelector("dialog");

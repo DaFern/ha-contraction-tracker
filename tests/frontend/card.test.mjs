@@ -119,6 +119,61 @@ test("header uses equal edge columns, a centred title and an icon-only bell refr
   assert.match(css, /header \.brand\{[^}]*justify-content:center/);
   assert.match(css, /\.brand svg\{[^}]*position:absolute/);
 });
+test("support appears once below existing controls with a fixed private external link", () => {
+  const html = card().shadowRoot.innerHTML;
+  assert.equal((html.match(/class="support"/g) || []).length, 1);
+  assert.equal((html.match(/<footer>/g) || []).length, 1);
+  assert.ok(html.indexOf('class="support"') > html.indexOf("Stop recording"));
+  assert.match(html, /Connected to Home Assistant/);
+  assert.match(html, /© 2026 Daniel Fern/);
+  assert.match(html, /If this project helps you, you can support its development\./);
+  const link = html.match(/<a class="support-link"[^>]*>[\s\S]*?<\/a>/)[0];
+  assert.match(link, /href="https:\/\/buymeacoffee\.com\/Badger182"/);
+  assert.match(link, /target="_blank"/);
+  assert.match(link, /rel="noopener noreferrer"/);
+  assert.match(link, /referrerpolicy="no-referrer"/);
+  assert.match(link, /<svg aria-hidden="true"/);
+  assert.match(link, /<span>Buy me a coffee<\/span>/);
+  assert.doesNotMatch(link, /data-command|disabled|onclick|revision-a|entry-a|sensor\.|[?&]/);
+  const section = html.match(/<section class="support"[\s\S]*?<\/section>/)[0];
+  assert.doesNotMatch(section, /<img|<iframe|<script|<form/);
+});
+test("support link remains independent of offline, preview, failure and command handlers", () => {
+  for (const [current, online, preview] of [
+    [state, false, false], [state, true, true],
+    [{ ...state, persistence_uncertain: true }, true, false],
+    [{ ...state, p: "active" }, true, false],
+    [{ ...state, p: "rate" }, true, false],
+    [{ ...state, p: "off" }, true, false],
+  ]) {
+    const calls = [], view = card(current, online, calls);
+    view.preview = preview;
+    view._render();
+    const before = JSON.stringify(view._current());
+    assert.match(view.shadowRoot.innerHTML, /class="support-link" href="https:\/\/buymeacoffee\.com\/Badger182"/);
+    assert.doesNotMatch(view.shadowRoot.innerHTML.match(/<a class="support-link"[^>]*>/)[0], /disabled|aria-disabled|data-command/);
+    view.shadowRoot.handlers.get("click")({ target: { closest: () => null } });
+    assert.equal(calls.length, 0);
+    assert.equal(JSON.stringify(view._current()), before);
+    assert.equal(view._pending, null);
+  }
+});
+test("support uses scoped wrapping CSS, keyboard focus and consistent GitHub metadata", async () => {
+  const root = new URL("../../", import.meta.url);
+  const css = await readFile(new URL("custom_components/contraction_tracker/frontend/tracker.css", root), "utf8");
+  assert.match(css, /\.support\{[^}]*flex-wrap:wrap/);
+  assert.match(css, /\.support-copy\{[^}]*min-width:0/);
+  assert.match(css, /\.support-link\{[^}]*min-height:44px/);
+  assert.match(css, /a:focus-visible/);
+  assert.doesNotMatch(css.match(/\.support\{[^}]*\}/)[0], /position:|bottom:/);
+  assert.equal((await readFile(new URL(".github/FUNDING.yml", root), "utf8")).trim(),
+    "buy_me_a_coffee: Badger182");
+  const readme = await readFile(new URL("README.md", root), "utf8");
+  assert.match(readme, /https:\/\/buymeacoffee\.com\/Badger182/);
+  assert.match(readme, /all functionality remains available without it/i);
+  const constants = await readFile(new URL("custom_components/contraction_tracker/const.py", root), "utf8");
+  assert.match(constants, /ui=support-footer1/);
+});
 test("paused reminder opt-in stays visible and can be explicitly turned off", () => {
   const html = card({ ...state, p: "off",
     movement: { enabled: false, preferred: true, k: "movement-token" } }).shadowRoot.innerHTML;

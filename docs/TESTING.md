@@ -15,6 +15,58 @@ notification callbacks. Frontend tests exercise the real JavaScript helpers and
 component methods with a minimal DOM stand-in. They are **not browser rendering,
 touch interaction, native HA integration or physical-phone tests**.
 
+### Support footer source preview (issue #2)
+
+The source candidate adds one optional support section after the unchanged
+connection/recording footer row. The shared card supplies the native panel too.
+It uses an original inline SVG cup and the fixed HTTPS creator page with
+`target="_blank"`, `rel="noopener noreferrer"` and `referrerpolicy="no-referrer"`.
+There is no embedded widget, remote image, payment/account configuration,
+state/token query string or donation-related tracker notification. All features
+remain available without supporting; no payout/verification status is claimed.
+The footer display name does not change the existing MIT licence notice.
+
+The module's existing `ui` query-key convention is advanced to
+`support-footer1`; JS imports and the CSS URL inherit that key. The version/tag
+and published downloads are not changed by developing these sources.
+README and `.github/FUNDING.yml` use the same confirmed `Badger182` page.
+
+With Node supporting built-in WebSocket and a local Chromium installation:
+
+```sh
+node tests/browser/support_footer.mjs
+```
+
+Set `CHROMIUM` if the binary is not `/usr/bin/chromium`. Optionally set
+`SUPPORT_PREVIEW_DIR` to an existing output directory. The runner uses the
+OpenCode cache when present, otherwise the system temporary directory.
+It serves only the development frontend and a synthetic fixture on loopback;
+it never connects to live Home Assistant, reads records or requires credentials.
+
+Local source validation passed **143 Python unit tests**, **42 frontend tests**
+(including three support regressions), release validation and the integration
+archive build. The Chromium runner passed **48 rendered cases**: 320/430/1280px,
+light/dark surrounding themes, card/panel/legacy/editor-preview, online/offline.
+It checks one footer, normal flow below controls, no horizontal overflow,
+44px minimum link height, at least 4.5:1 text/link contrast against the card's
+gradient endpoints, native keyboard activation and no tracker commands.
+The tracker retains its existing dark card palette inside both HA theme
+surroundings; no unrelated theme conversion was introduced.
+
+No non-loopback page requests were observed. Keyboard activation was intercepted
+by the **test fixture only**, before external navigation, so no payment page
+was visited and no transaction attempted. The production link has no custom
+click handler. These tests verify safe link attributes, not payout status or an
+actual payment/referrer exchange with the external site.
+
+320px light and 1280px dark synthetic screenshots were visually reviewed: support
+text/link wrapped cleanly, keyboard focus was visible, and the existing
+connection status, Stop recording and movement/history controls remained visible.
+Screenshot/results artifacts are private local test output, not repository
+assets or production screenshots. Installed HA rendering/physical phone
+acceptance, fresh native/distribution CI, commit/push and deployment remain
+separate pending steps for this uncommitted UI candidate.
+
 ## Native Home Assistant tests — separate development environment
 
 Use a fresh disposable Python 3.14.2+ environment, not the live instance.

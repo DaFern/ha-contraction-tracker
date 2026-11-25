@@ -202,6 +202,16 @@ approval, a listing or a public release. `tools/check_release.py --publish`
 checks repository, maintainer and licence metadata; it is not a substitute for
 native HA tests, distribution validators or phone acceptance.
 
+## Optional support
+
+If this project helps you, you can [buy Daniel Fern a coffee](https://buymeacoffee.com/Badger182)
+to help with development, testing and maintenance. Supporting is entirely
+optional: all functionality remains available without it. Support does not
+purchase features or guarantee a support response.
+
+The tracker uses an ordinary external link, not an embedded payment widget.
+Payment and payout/account settings are managed on Buy Me a Coffee, not in HA.
+
 ## Licence and product boundary
 
 The Home Assistant integration, its project documentation and bundled original
