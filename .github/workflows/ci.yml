@@ -39,6 +39,7 @@ jobs:
   native-ha-tests:
     name: "Native HA ${{ matrix.ha_version }}"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -89,4 +90,4 @@ jobs:
           assert plugin == expected, "Test package differs from the matrix target"
           PY
           python -m pip check
-      - run: pytest tests/ha -v
+      - run: pytest tests/ha -v --capture=tee-sys -o faulthandler_timeout=30

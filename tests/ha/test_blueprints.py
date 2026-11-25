@@ -1,13 +1,16 @@
 """Use real blueprint expansion, automation schemas, triggers and script runner."""
 
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from homeassistant.components.automation import DATA_COMPONENT
 from homeassistant.components.automation.config import (
     AUTOMATION_BLUEPRINT_SCHEMA, async_validate_config_item,
 )
 from homeassistant.components.blueprint.models import Blueprint, BlueprintInputs
+from homeassistant.core import callback
 from homeassistant.setup import async_setup_component
 from homeassistant.util import yaml as yaml_util
 from pytest_homeassistant.common import async_fire_time_changed
@@ -21,6 +24,69 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def capture(kind):
     return [{"action": "test.capture", "data": {"kind": kind}}]
+
+
+async def timed_command(hass, entry, name):
+    """Dispatch normally, without waiting for an intentionally suspended script.
+
+    The lifecycle helper drains *all* HA work, which includes an automation's
+    delay/wait. A frozen-clock test must reach its clock advancement first.
+    """
+    from custom_components.contraction_tracker.const import DOMAIN
+
+    result = await hass.services.async_call(
+        DOMAIN, "command",
+        {"entry_id": entry.entry_id, "command": name,
+         "token": entry.runtime_data.tracker.view()["k"]},
+        blocking=True, return_response=True,
+    )
+    # Flush the ready state/trigger callbacks, not future timers.
+    await asyncio.sleep(0)
+    return result
+
+
+async def timed_record(hass, entry):
+    for name in ("show", "start", "stop", "Mild"):
+        await timed_command(hass, entry, name)
+    return entry.runtime_data.tracker.history()
+
+
+async def wait_for_step(hass, name, expected):
+    """Observe the real script reaching its wait/delay, preserving HA's listener.
+
+    This is the same action-observer approach used in HA's own script tests,
+    not a mock of actions, clocks, timers or trigger dispatch.
+    """
+    automation = hass.data[DATA_COMPONENT].get_entity(f"automation.synthetic_{name}")
+    script = automation.action_script
+    reached = asyncio.Event()
+    previous_listener = script.change_listener
+
+    @callback
+    def changed():
+        if previous_listener is not None:
+            previous_listener()
+        if script.is_running and script.last_action == expected:
+            reached.set()
+
+    script.change_listener = changed
+    try:
+        changed()
+        await asyncio.wait_for(reached.wait(), 5)
+    finally:
+        script.change_listener = previous_listener
+    assert script.is_running
+    assert script.last_action == expected
+
+
+async def stop_test_automation(hass, name):
+    """Cancel any deliberate remaining wait before the final full task drain."""
+    await hass.services.async_call(
+        "automation", "turn_off",
+        {"entity_id": f"automation.synthetic_{name}", "stop_actions": True},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
 
 
 async def load_automation(hass, name, inputs):
@@ -114,14 +180,17 @@ async def test_partner_blueprint_fires_for_equal_records_once_at_selected_stage(
 
 async def test_partner_cooldown_ignores_extra_events_without_extending_window(hass, freezer, frozen_tracker_clock):
     entry, calls = await install(hass, "partner_update", cooldown_seconds=60)
-    await record(hass, entry)
-    await record(hass, entry)
+    await timed_record(hass, entry)
+    await wait_for_step(hass, "partner_update", "delay")
+    await timed_record(hass, entry)
     assert len(calls) == 1
     freezer.tick(61)
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    await record(hass, entry)
+    await timed_record(hass, entry)
+    await wait_for_step(hass, "partner_update", "delay")
     assert len(calls) == 2
+    await stop_test_automation(hass, "partner_update")
 
 
 async def test_calming_blueprint_receives_real_downtime_inactivity_closure(hass, freezer, frozen_tracker_clock):
@@ -138,19 +207,22 @@ async def test_calming_blueprint_receives_real_downtime_inactivity_closure(hass,
 
 async def test_timer_blueprint_cancels_on_stop_and_is_guarded_for_new_contraction(hass, freezer, frozen_tracker_clock):
     entry, calls = await install(hass, "timer_reminder")
-    await command(hass, entry, "show")
-    await command(hass, entry, "start")
+    await timed_command(hass, entry, "show")
+    await timed_command(hass, entry, "start")
+    await wait_for_step(hass, "timer_reminder", "wait for trigger")
     freezer.tick(10)
-    await command(hass, entry, "stop")
+    await timed_command(hass, entry, "stop")
     await command(hass, entry, "Mild")
     freezer.tick(25)
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert calls == []
-    await command(hass, entry, "start")
+    await timed_command(hass, entry, "start")
+    await wait_for_step(hass, "timer_reminder", "wait for trigger")
     freezer.tick(29)
     async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    await asyncio.sleep(0)
+    await wait_for_step(hass, "timer_reminder", "wait for trigger")
     assert calls == []
     freezer.tick(2)
     async_fire_time_changed(hass)
@@ -161,12 +233,14 @@ async def test_timer_blueprint_cancels_on_stop_and_is_guarded_for_new_contractio
     await hass.async_block_till_done()
     assert len(calls) == 1
     assert entry.runtime_data.tracker.view()["p"] == "active"
+    await stop_test_automation(hass, "timer_reminder")
 
 
 async def test_timer_blueprint_reload_cancels_old_wait_without_catchup(hass, freezer, frozen_tracker_clock):
     entry, calls = await install(hass, "timer_reminder")
-    await command(hass, entry, "show")
-    await command(hass, entry, "start")
+    await timed_command(hass, entry, "show")
+    await timed_command(hass, entry, "start")
+    await wait_for_step(hass, "timer_reminder", "wait for trigger")
     freezer.tick(10)
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
@@ -176,8 +250,10 @@ async def test_timer_blueprint_reload_cancels_old_wait_without_catchup(hass, fre
     assert calls == []
     await command(hass, entry, "stop")
     await command(hass, entry, "Mild")
-    await command(hass, entry, "start")
+    await timed_command(hass, entry, "start")
+    await wait_for_step(hass, "timer_reminder", "wait for trigger")
     freezer.tick(31)
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert calls == [{"kind": "reminder"}]
+    await stop_test_automation(hass, "timer_reminder")

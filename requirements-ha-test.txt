@@ -2,3 +2,4 @@
 # CI adds exact matching Home Assistant/test-package pins for each matrix target.
 # Do not install alongside the retired pytest-homeassistant-custom-component.
 pytest-homeassistant>=2026.11.0,<2026.12.0
+pytest-timeout==2.4.0

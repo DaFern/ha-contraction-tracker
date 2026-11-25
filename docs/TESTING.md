@@ -106,6 +106,24 @@ No production automation is created. The files join the existing exact-version
 CI matrix automatically via `pytest tests/ha -v`; definitions are not passing
 test evidence until that matrix has actually run.
 
+The first automation matrix run, `45608262555` on `5774039`, was cancelled after
+both native targets completed the same 18 cases and then stalled at the
+cooldown test. This was partial native evidence, not a passing suite. The timed
+blueprint tests now dispatch actual tracker services without the lifecycle
+helper's full task drain while a script deliberately waits. They observe the
+real script's delay/wait phase, advance fixture time, and drain all tasks only
+after the wait completes or is explicitly cancelled. All previous behavioral
+assertions remain; no HA scheduler, automation execution or blueprint action
+is mocked or disabled.
+
+`pytest-timeout==2.4.0` provides a 60-second per-test wall-clock thread watchdog,
+including teardown, independent of frozen asyncio time. CI also requests a
+30-second faulthandler dump and live captured output, with a 15-minute native-job
+cap. A stuck case therefore emits diagnostics and fails rather than silently
+consuming hours. The exact official HA/test-package pins and `pip check` remain.
+The corrected native run must confirm this test-sequencing diagnosis; it is not
+evidence that production cooldown behavior was faulty or has been changed.
+
 The no-phone unit expectation now requires scheduled **state evaluation**, not
 no schedule: the deadline must publish the over-two-minute state with no
 notification marker write. Clock rollback tests retain the one-phone-attempt
