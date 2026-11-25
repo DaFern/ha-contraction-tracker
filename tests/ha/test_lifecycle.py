@@ -7,6 +7,7 @@ Only the explicit panel-registration failure test injects a failing dependency.
 
 from copy import deepcopy
 from datetime import UTC, datetime
+from functools import partial
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -32,12 +33,27 @@ from custom_components.contraction_tracker.const import (
     STORAGE_VERSION,
 )
 from custom_components.contraction_tracker.model import InvalidCommand, new_state, transition
+from custom_components.contraction_tracker.manager import Tracker
 
 
 @pytest.fixture(autouse=True)
 def isolated_storage(hass_storage):
     """Keep synthetic records in the official test backend, never a live store."""
     yield
+
+
+@pytest.fixture
+def frozen_tracker_clock(freezer, monkeypatch):
+    """Inject the fixture clock, not the real time.time captured at module import.
+
+    Setup/unload, the real Tracker, HA's scheduler and storage stay unmocked.
+    Resolve time.time on each call so later freezer.move_to calls are observed,
+    including by a new Tracker constructed during reload.
+    """
+    monkeypatch.setattr(
+        "custom_components.contraction_tracker.Tracker",
+        partial(Tracker, clock=lambda: time.time()),
+    )
 
 
 def new_entry(hass, title="Synthetic tracker", notification="none"):
@@ -441,7 +457,7 @@ async def test_reminder_preference_upgrade_and_pause_reload_resume_preserve_reco
 
 
 async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_stop(
-    hass, hass_admin_user, freezer
+    hass, hass_admin_user, freezer, frozen_tracker_clock
 ):
     calls = []
     async def phone(call):
@@ -486,7 +502,9 @@ async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_
     assert any(c.get("message") == "clear_notification" and c["data"]["tag"] == tag for c in calls)
 
 
-async def test_unload_cancels_long_warning_and_overdue_setup_recovers_one_attempt(hass, freezer):
+async def test_unload_cancels_long_warning_and_overdue_setup_recovers_one_attempt(
+    hass, freezer, frozen_tracker_clock
+):
     calls = []
     async def phone(call):
         calls.append(deepcopy(dict(call.data)))

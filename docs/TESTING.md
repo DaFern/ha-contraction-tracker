@@ -97,6 +97,9 @@ Native lifecycle cases exercise the real scheduled callback, unload cancellation
 overdue setup, schema-7 upgrade and authorized Stop from the warning notification.
 These native cases must pass in isolated CI before deployment; test definitions
 or local stand-ins are not native/physical-phone evidence.
+The two advancing-time tests explicitly inject a clock following the freezer
+into the real Tracker, avoiding its import-time default time.time reference.
+They do not mock HA's scheduler, integration setup/unload or persistence.
 
 Reminder-preference tests cover manual and idle-session pauses, ordinary and
 notification-based session restarts, explicit opt-out while paused, movement

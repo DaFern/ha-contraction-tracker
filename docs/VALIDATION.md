@@ -325,3 +325,12 @@ deployment results remain pending; activation requires restart approval.
 Physical-phone alert delivery, timing and real-browser interaction are not
 established by these local tests. No alert must be interpreted as reassurance.
 See [the warning rules](CONTACT_PROMPTS.md#timed-long-contraction-warning).
+
+The [first warning CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45595584697)
+on `a4607d5` passed standalone tests/build, hassfest and HACS. Both exact native
+targets reported **28 passed, 2 failed**: the new timer tests froze wall time but
+the Tracker's default clock function had been captured at module import.
+The test correction explicitly injects a clock that follows the freezer into
+the real Tracker, including on reload. HA's scheduler, setup/unload, persistence
+and all warning assertions remain unchanged; no runtime code, thresholds or
+checks are changed or skipped. Rerun results are pending. Deployment is blocked.
