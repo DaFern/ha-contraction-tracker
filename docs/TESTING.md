@@ -198,6 +198,14 @@ No live timer, record, notification or installed integration is changed by
 these isolated checks; source changes alone do not repair an installed phone
 notification. See [warning cleanup limits](CONTACT_PROMPTS.md#warning-cleanup-and-delayed-delivery).
 
+The first follow-up matrix, run `45707721060` on `f9e4cad`, passed standalone
+checks, hassfest and HACS but each native target reported **65 passed, 1 failed**.
+The updated unload-recovery test tried to read `entry.runtime_data` after HA had
+correctly removed it. The test now derives the warning tag from its captured,
+verified stored-state snapshot, retaining every unload/overdue/one-attempt
+assertion. No additional runtime change was needed for that test correction.
+Fresh native results remain pending.
+
 The no-phone unit expectation now requires scheduled **state evaluation**, not
 no schedule: the deadline must publish the over-two-minute state with no
 notification marker write. Clock rollback tests retain the one-phone-attempt

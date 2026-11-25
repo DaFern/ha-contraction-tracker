@@ -522,7 +522,7 @@ async def test_unload_cancels_long_warning_and_overdue_setup_recovers_one_attemp
     freezer.move_to(datetime.fromtimestamp(before["s"] + 180, UTC))
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    tag = long_warning_tag(entry.runtime_data.tracker.view(), entry.entry_id)
+    tag = long_warning_tag(before, entry.entry_id)
     def alerts():
         return [c for c in calls if c.get("data", {}).get("tag") == tag
                 and c.get("message") != "clear_notification"]
