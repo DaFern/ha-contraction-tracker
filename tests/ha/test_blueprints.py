@@ -51,6 +51,28 @@ async def timed_record(hass, entry):
     return entry.runtime_data.tracker.history()
 
 
+def step_matches(actual, expected):
+    """HA labels a delay with its duration; other action names stay exact."""
+    return actual == expected or (
+        expected == "delay" and isinstance(actual, str) and actual.startswith("delay ")
+    )
+
+
+@pytest.mark.parametrize(("actual", "expected", "matches"), [
+    ("delay", "delay", True),
+    ("delay 0:01:00", "delay", True),
+    ("delay 0:00:30", "delay", True),
+    ("wait for trigger", "wait for trigger", True),
+    (None, "delay", False),
+    ("delayed action", "delay", False),
+    ("wait for trigger", "delay", False),
+    ("delay 0:01:00", "wait for trigger", False),
+    ("wait for trigger extra", "wait for trigger", False),
+])
+def test_observer_matches_only_the_requested_action(actual, expected, matches):
+    assert step_matches(actual, expected) is matches
+
+
 async def wait_for_step(hass, name, expected):
     """Observe the real script reaching its wait/delay, preserving HA's listener.
 
@@ -66,7 +88,7 @@ async def wait_for_step(hass, name, expected):
     def changed():
         if previous_listener is not None:
             previous_listener()
-        if script.is_running and script.last_action == expected:
+        if script.is_running and step_matches(script.last_action, expected):
             reached.set()
 
     script.change_listener = changed
@@ -76,7 +98,7 @@ async def wait_for_step(hass, name, expected):
     finally:
         script.change_listener = previous_listener
     assert script.is_running
-    assert script.last_action == expected
+    assert step_matches(script.last_action, expected)
 
 
 async def stop_test_automation(hass, name):
