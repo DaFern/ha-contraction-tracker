@@ -371,5 +371,13 @@ With owner approval, the delay now uses the full-precision current clock.
 The recorded start, strict over-120-second guard, attempt policy and Stop token
 are unchanged. Unit and native cases cover scheduling offsets 0, 0.2, 0.8 and
 0.999 seconds, retaining the no-early-warning and exactly-one-attempt assertions.
-Fresh CI results are pending. This correction is source-only; no deployment or
-restart is authorized as part of this follow-up.
+The [deadline-fix CI run](https://github.com/DaFern/ha-contraction-tracker/actions/runs/45599219304)
+on commit `eb438d536a7135feb4cc1a9d05017b425f21ea2d` passed all five jobs:
+126 Python unit tests, 39 frontend tests, all 33 native cases on each exact HA
+target, dependency checks, hassfest, HACS and the release build. The four
+fractional offsets each pass the full native threshold/reload/phone-Stop case.
+A local negative control restored the old rounding in memory and failed all
+three non-integer unit offsets, confirming the new regression detects the bug.
+This correction is source-only; no deployment or restart was authorized or
+performed as part of this follow-up. The running installation still has the
+previous subsecond scheduling behaviour.
