@@ -88,6 +88,16 @@ browser execution, touch interaction or accessibility.
 
 ## Distribution validators
 
+`test_long_contraction.py` checks the strict two-minute boundary, verified
+one-attempt persistence, restart/downtime, stale callbacks, independent settings
+and movement, queued Stop receipt timing, no selected phone, delivery failure
+and unverified saves. Frontend tests cross the threshold without a server update,
+show the alert banner and retain enabled Stop, without issuing any command.
+Native lifecycle cases exercise the real scheduled callback, unload cancellation,
+overdue setup, schema-7 upgrade and authorized Stop from the warning notification.
+These native cases must pass in isolated CI before deployment; test definitions
+or local stand-ins are not native/physical-phone evidence.
+
 Reminder-preference tests cover manual and idle-session pauses, ordinary and
 notification-based session restarts, explicit opt-out while paused, movement
 logged in or out of a session, exact hourly boundaries, and schema-6 upgrades.

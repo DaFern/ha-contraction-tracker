@@ -8,7 +8,13 @@ COMMANDS = ("show", "start", "stop", "Mild", "Moderate", "Strong", "end", "notif
             "movement", "reminders_on", "reminders_off", "intensity")
 RATINGS = ("Mild", "Moderate", "Strong")
 STATIC_URL = "/contraction_tracker_static"
-MODULE_URL = f"{STATIC_URL}/tracker.js?v={VERSION}&ui=reminder2"
+MODULE_URL = f"{STATIC_URL}/tracker.js?v={VERSION}&ui=long-warning1"
+LONG_CONTRACTION_SECONDS = 120
+LONG_CONTRACTION_WARNING = (
+    "Timer over 2 minutes. If this contraction is still continuing, contact your "
+    "midwife or maternity unit urgently. If it ended earlier, stop the timer "
+    "and correct the record."
+)
 SERVICE_COMMAND = "command"
 CONF_NOTIFY = "notification_service"
 CONF_HOME_PATH = "home_path"

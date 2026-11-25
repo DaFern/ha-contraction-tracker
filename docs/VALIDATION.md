@@ -296,3 +296,32 @@ icon, icon-only bell/refresh button and intact recording controls/history.
 The normal restored-session warning remained visible. Synthetic reminder and
 session tests were not run against the live ledger; physical-phone reminder
 delivery and pause/resume acceptance remain unverified.
+
+### Timed long-contraction warning — repository implementation
+
+The owner approved adding a live two-minute timer warning after review of NHS
+and NICE guidance on 25 November 2026. The rule describes the manual timer, not
+a diagnosis. A visible banner asks for urgent maternity contact if the
+contraction is continuing, or stopping/correcting an accidentally running timer.
+Stop remains available; no end time or clinical event is fabricated.
+
+The HA adapter schedules a dedicated callback at 121 seconds after the recorded
+start, with stale-identity checks and unload cancellation. The serialized manager
+independently verifies one attempt marker before a configured phone alert, never
+rotating the Stop token. Schema 7 upgrades to 8 by adding an initially false
+marker. Claimed attempts survive restart and are not retried after ambiguous
+delivery; an overdue, unclaimed active contraction is checked after setup.
+The phone alert preserves existing lock-screen privacy and supports authorized
+Stop. The UI warning remains independent of the attempt marker.
+
+Local results: 125 Python unit tests, 39 frontend tests, release-structure checks,
+native-test syntax and diff checks passed. Three new native lifecycle cases are
+written but **not yet run**; CI and distribution validators for this candidate
+are pending. No live synthetic events, deployment, restart, publication or tag
+changes were performed during local development. The owner subsequently approved
+commit/push, isolated CI and deployment only if every check passes. Those CI and
+deployment results remain pending; activation requires restart approval.
+
+Physical-phone alert delivery, timing and real-browser interaction are not
+established by these local tests. No alert must be interpreted as reassurance.
+See [the warning rules](CONTACT_PROMPTS.md#timed-long-contraction-warning).

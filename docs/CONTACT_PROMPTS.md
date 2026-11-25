@@ -42,6 +42,50 @@ notification. Save/restart warnings remain visible when applicable.
   Expired evidence returns to a neutral contact/support prompt, never “safe to
   wait”, “not in labour” or “stay home”.
 
+## Timed long-contraction warning
+
+The native tracker additionally shows a prominent live banner when an active
+timer passes two minutes. The browser checks its displayed timer each second;
+the server schedules a separate check for 121 seconds after its recorded start
+(strictly over 120 seconds), without requiring another tap or a minute refresh.
+Scheduling and phone delivery can be delayed; this is not medical monitoring.
+
+The warning says:
+
+> Timer over 2 minutes. If this contraction is still continuing, contact your
+> midwife or maternity unit urgently. If it ended earlier, stop the timer and
+> correct the record.
+
+If a phone notification action is configured, the integration makes one alert
+attempt per contraction, using a separate ordinary Android high-importance
+channel. Lock-screen privacy follows the user's existing setting. Stop remains
+available on the tracker and alert; only the user's Stop records an end time.
+Nothing classifies the contraction, invents an end or changes its saved timing.
+
+The attempt marker is independently verified in storage before sending. It
+does not change the Stop or movement tokens. Reload/restart cannot re-send an
+already claimed attempt; an overdue active timer not yet claimed gets one
+attempt after setup. A stopped or unloaded tracker rejects stale callbacks.
+An uncertain save blocks actionable alerts and controls, as with other writes.
+An uncertain or failed phone delivery is not retried automatically: a warning
+can consequently be missed. This is intentional duplicate prevention, not
+evidence of successful delivery. The banner remains independent of that marker.
+
+The app cannot distinguish a genuinely continuing contraction from a timer left
+running, diagnose hyperstimulation, assess fetal wellbeing or guarantee alerts
+through outages or phone notification restrictions. Never wait for an alert if
+worried. NHS advice is to contact maternity urgently for any contraction lasting
+longer than two minutes; call 111 if the maternity team cannot be reached.
+Individual care-team advice to call sooner still applies.
+
+Sources checked 25 November 2026:
+
+- [NHS — signs that labour has begun](https://www.nhs.uk/pregnancy/labour-and-birth/signs-that-labour-has-begun/):
+  urgent contact for any contraction lasting longer than two minutes.
+- [NICE NG207 — hyperstimulation](https://www.nice.org.uk/guidance/ng207/chapter/recommendations#hyperstimulation):
+  describes prolonged contractions in the specific context of induction.
+  A manual home timer must not infer this clinical diagnosis.
+
 ## Location wording
 
 | Selection | Repeated-gap contact prompt |

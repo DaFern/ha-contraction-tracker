@@ -118,7 +118,7 @@ class LocationTests(unittest.TestCase):
         old["schema"] = 3
         old["guidance"] = {key: old["guidance"][key] for key in ("location", "interval", "k")}
         new = model.load_state(old)
-        self.assertEqual(new["schema"], 7)
+        self.assertEqual(new["schema"], 8)
         for key in ("location", "interval", "k"):
             self.assertEqual(new["guidance"][key], old["guidance"][key])
         self.assertEqual(new["k"], old["k"])

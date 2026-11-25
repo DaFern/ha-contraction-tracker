@@ -91,11 +91,13 @@ class ReminderPreferenceTests(unittest.TestCase):
             if enabled:
                 old = apply(old, "reminders_on", 1100)
             old["schema"] = 6
+            old.pop("long_warning_attempted")
             old["movement"].pop("preferred")
             # An old timestamp is not evidence that a current Off was automatic.
             old["movement"]["enabled_at"] = 1100
             new = model.load_state(old)
             self.assertEqual(new["movement"].pop("preferred"), enabled)
+            self.assertFalse(new.pop("long_warning_attempted"))
             new["schema"] = 6
             self.assertEqual(new, old)
 

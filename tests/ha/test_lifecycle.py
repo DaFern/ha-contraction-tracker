@@ -6,6 +6,7 @@ Only the explicit panel-registration failure test injects a failing dependency.
 """
 
 from copy import deepcopy
+from datetime import UTC, datetime
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -17,7 +18,7 @@ from homeassistant.core import Context
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.storage import Store
-from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.contraction_tracker import get_runtime
 from custom_components.contraction_tracker.const import (
@@ -414,7 +415,7 @@ async def test_reminder_preference_upgrade_and_pause_reload_resume_preserve_reco
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     upgraded = await stored(hass, entry)
-    assert upgraded["schema"] == 7
+    assert upgraded["schema"] == 8
     assert upgraded["movement"]["preferred"] is enabled
     assert upgraded["records"] == state["records"]
     await command(hass, entry, "end")
@@ -437,3 +438,90 @@ async def test_reminder_preference_upgrade_and_pause_reload_resume_preserve_reco
     final = await stored(hass, entry)
     assert not final["movement"]["preferred"] and not final["movement"]["enabled"]
     assert final["records"] == state["records"]
+
+
+async def test_scheduled_long_warning_at_threshold_once_across_reload_and_phone_stop(
+    hass, hass_admin_user, freezer
+):
+    calls = []
+    async def phone(call):
+        calls.append(deepcopy(dict(call.data)))
+    hass.services.async_register("notify", "mobile_app_long_test", phone)
+    entry = await setup_entry(hass, notification="notify.mobile_app_long_test")
+    await command(hass, entry, "show")
+    await command(hass, entry, "start")
+    before = await stored(hass, entry)
+    tag = f"contraction_tracker_long_{entry.entry_id}"
+    def alerts():
+        return [c for c in calls if c.get("data", {}).get("tag") == tag
+                and c.get("message") != "clear_notification"]
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 120, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert alerts() == []
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 121, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    warned = await stored(hass, entry)
+    assert warned == {**before, "long_warning_attempted": True}
+    assert len(alerts()) == 1
+    assert alerts()[0]["data"]["visibility"] == "private"
+    assert "If this contraction is still continuing" in alerts()[0]["message"]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 180, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert len(alerts()) == 1
+    hass.bus.async_fire(
+        "mobile_app_notification_action",
+        {"tag": tag, "action": f"CT|{entry.entry_id}|stop|{before['k']}"},
+        context=Context(user_id=hass_admin_user.id),
+    )
+    await hass.async_block_till_done()
+    stopped = await stored(hass, entry)
+    assert stopped["p"] == "rate"
+    assert len(stopped["records"]) == 1
+    assert stopped["records"][0]["duration"] == 180
+    assert any(c.get("message") == "clear_notification" and c["data"]["tag"] == tag for c in calls)
+
+
+async def test_unload_cancels_long_warning_and_overdue_setup_recovers_one_attempt(hass, freezer):
+    calls = []
+    async def phone(call):
+        calls.append(deepcopy(dict(call.data)))
+    hass.services.async_register("notify", "mobile_app_long_recovery", phone)
+    entry = await setup_entry(hass, notification="notify.mobile_app_long_recovery")
+    await command(hass, entry, "show")
+    await command(hass, entry, "start")
+    before = await stored(hass, entry)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    freezer.move_to(datetime.fromtimestamp(before["s"] + 180, UTC))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    tag = f"contraction_tracker_long_{entry.entry_id}"
+    def alerts():
+        return [c for c in calls if c.get("data", {}).get("tag") == tag
+                and c.get("message") != "clear_notification"]
+    assert alerts() == []
+    assert await stored(hass, entry) == before
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert len(alerts()) == 1
+    assert await stored(hass, entry) == {**before, "long_warning_attempted": True}
+
+
+async def test_schema_seven_upgrade_keeps_active_timing_and_records(hass):
+    entry = new_entry(hass)
+    now = int(time.time())
+    state = transition(new_state(), "show", "", now - 60)
+    state = transition(state, "start", state["k"], now - 60)
+    state["schema"] = 7
+    state.pop("long_warning_attempted")
+    await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_save(state)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert await stored(hass, entry) == {**state, "schema": 8, "long_warning_attempted": False}
+    assert entry.runtime_data.tracker.view()["p"] == "active"

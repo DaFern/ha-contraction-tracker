@@ -8,6 +8,7 @@ import time
 from .model import InvalidCommand, configure_guidance, correct, expire_idle, load_state, reminder_due, snapshot, transition
 from .location import uncertain
 from .legacy import convert, digest, require_pristine, source_digest, summary as import_summary
+from .const import LONG_CONTRACTION_SECONDS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class Tracker:
         self.entity_id = None
         self.rating_notify = None
         self.warning_notify = None
+        self.long_warning_notify = None
 
     def view(self):
         now = int(self._clock())
@@ -247,6 +249,45 @@ class Tracker:
 
     async def refresh_notification(self):
         await self.command("notify")
+
+    def long_warning_schedule(self):
+        """Return the current contraction identity and delay, never a clinical status."""
+        if (self.closed or self.persistence_uncertain or self.import_uncertain
+                or self.long_warning_notify is None or self._state["p"] != "active"
+                or self._state["long_warning_attempted"]):
+            return None
+        state = self._state
+        identity = (state["session_id"], state["n"], state["s"])
+        delay = max(0, state["s"] + LONG_CONTRACTION_SECONDS + 1 - int(self._clock()))
+        return identity, delay
+
+    async def check_long_contraction(self, identity):
+        """One verified alert attempt per active contraction, including after restart."""
+        async with self._lock:
+            state = self._state
+            if (self.closed or self.persistence_uncertain or self.import_uncertain
+                    or self.long_warning_notify is None or state["p"] != "active"
+                    or state["long_warning_attempted"]
+                    or identity != (state["session_id"], state["n"], state["s"])
+                    or int(self._clock()) - state["s"] <= LONG_CONTRACTION_SECONDS):
+                return
+            candidate = deepcopy(state)
+            candidate["long_warning_attempted"] = True
+            try:
+                # Do not rotate the main or movement token: Stop must stay valid.
+                # Claim before delivery; an uncertain response must not create repeat alerts.
+                await self._commit(candidate)
+            except PersistenceError:
+                _LOGGER.warning("Contraction timer warning could not be verified; controls are blocked")
+                return
+            self._publish()
+            try:
+                async with asyncio.timeout(10):
+                    await self.long_warning_notify(self.view())
+            except Exception:
+                self.notification_failed = True
+                _LOGGER.warning("Contraction timer warning delivery could not be confirmed")
+                self._publish()
 
     def history(self, limit=50):
         self._check_save_outcome()

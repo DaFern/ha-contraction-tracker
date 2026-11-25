@@ -27,6 +27,12 @@ tests or isolated fresh-install checks have passed.
 - The title is centred between the menu and icon-only bell-refresh notification
   control; refreshing a notification does not start or stop a contraction.
 - Start → Stop → Mild / Moderate / Strong; both interfaces use the same state.
+- A visible warning when an active timer passes two minutes, plus one phone
+  alert attempt per contraction if notifications are configured. It asks you to
+  contact maternity urgently if the contraction is still continuing, or stop and
+  correct a timer left running accidentally. It never automatically stops the
+  timer, changes a record or diagnoses a complication. See
+  [the warning rules and limitations](docs/CONTACT_PROMPTS.md#timed-long-contraction-warning).
 - True rolling-hour average duration, average start-to-start interval and start
   count (including an active contraction), calculated from the full history.
 - The last six completed contractions always visible, even across recording
@@ -94,6 +100,10 @@ No existing personal history was copied into this project.
 - Actions are timestamped at **server receipt**, not the precise phone tap time.
   A delayed network message can therefore affect measurements. The browser's
   clock can affect the displayed live counter; saved times come from the server.
+- The two-minute banner uses the live browser timer and available server state.
+  The separate phone check needs Home Assistant running and normal Android
+  notification delivery; it cannot bypass offline status, notification settings
+  or Do Not Disturb. No alert, or no alert yet, is never reassurance to wait.
 - After an outage, restored timing is explicitly flagged. Events made offline
   can be missing; this is not an offline phone app.
 - Idle closure is checked every minute while HA runs, before timer commands and

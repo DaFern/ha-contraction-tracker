@@ -16,7 +16,7 @@ from homeassistant.core import CoreState, HomeAssistant, ServiceCall, SupportsRe
 from homeassistant.exceptions import ConfigEntryError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 
 from .const import (
     COMMANDS, CONF_HOME_PATH, CONF_NOTIFY, CONF_PUBLIC, DOMAIN, MODULE_URL,
@@ -24,7 +24,7 @@ from .const import (
 )
 from .manager import PersistenceError, Tracker, verified_save
 from .model import InvalidCommand, InvalidStorage, load_state
-from .notifications import build_notification, build_rating, build_warning
+from .notifications import build_long_warning, build_notification, build_rating, build_warning
 from .location import resolve as resolve_location
 from .migration import read_source
 
@@ -200,6 +200,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                                        payload, blocking=True)
         for tag in ([f"contraction_tracker_rating_{entry.entry_id}"] if view["p"] != "rate" else []) + (
             [f"contraction_tracker_movement_{entry.entry_id}"] if not view["movement"]["enabled"] or not view["movement"]["last_alert"] else []
+        ) + (
+            [f"contraction_tracker_long_{entry.entry_id}"]
+            if view["p"] != "active" or not view["long_warning_attempted"] else []
         ):
             await hass.services.async_call("notify", service.removeprefix("notify."),
                 {"message": "clear_notification", "data": {"tag": tag}}, blocking=True)
@@ -235,7 +238,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass, STORAGE_VERSION, store_key, private=True,
                 atomic_writes=True, read_only=True,
             ).async_load()
-        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4, 5, 6):
+        if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in (1, 2, 3, 4, 5, 6, 7):
             data = await verified_save(load_state(data), store.async_save, readback)
         tracker = Tracker(data, store.async_save, notify, location_provider=location_provider, readback=readback)
         # Reconcile elapsed downtime before exposing controls or old rest timers.
@@ -250,6 +253,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     tracker.rating_notify = lambda view: send_auxiliary(view, build_rating)
     tracker.warning_notify = (
         (lambda view: send_auxiliary(view, build_warning))
+        if settings.get(CONF_NOTIFY, "none") != "none" else None
+    )
+    tracker.long_warning_notify = (
+        (lambda view: send_auxiliary(view, build_long_warning))
         if settings.get(CONF_NOTIFY, "none") != "none" else None
     )
     global_state = hass.data[DOMAIN]
@@ -279,7 +286,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
         parts = action.split("|")
         if len(parts) != 4 or event.data.get("tag") not in (
-            f"contraction_tracker_{entry.entry_id}", f"contraction_tracker_rating_{entry.entry_id}"
+            f"contraction_tracker_{entry.entry_id}", f"contraction_tracker_rating_{entry.entry_id}",
+            f"contraction_tracker_long_{entry.entry_id}",
         ):
             return
         try:
@@ -308,6 +316,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.async_create_background_task(hass, tracker.refresh_location(), "Refresh tracker location")
     entry.async_on_unload(hass.bus.async_listen("state_changed", location_event))
     entry.async_on_unload(entry.add_update_listener(_options_updated))
+    cancel_long_warning = None
+    scheduled_identity = None
+
+    @callback
+    def clear_long_warning_timer():
+        nonlocal cancel_long_warning, scheduled_identity
+        if cancel_long_warning is not None:
+            cancel_long_warning()
+        cancel_long_warning = None
+        scheduled_identity = None
+
+    async def check_long_warning(identity):
+        await tracker.check_long_contraction(identity)
+        schedule_long_warning()  # Reschedule if the clock moved backwards.
+
+    @callback
+    def schedule_long_warning():
+        nonlocal cancel_long_warning, scheduled_identity
+        schedule = tracker.long_warning_schedule()
+        if schedule is None:
+            clear_long_warning_timer()
+            return
+        identity, delay = schedule
+        if scheduled_identity == identity:
+            return
+        clear_long_warning_timer()
+        scheduled_identity = identity
+
+        @callback
+        def due(_now):
+            nonlocal cancel_long_warning, scheduled_identity
+            cancel_long_warning = None
+            scheduled_identity = None
+            entry.async_create_background_task(
+                hass, check_long_warning(identity), "Check contraction timer warning"
+            )
+
+        cancel_long_warning = async_call_later(hass, delay, due)
+
+    entry.async_on_unload(tracker.subscribe(schedule_long_warning))
+    entry.async_on_unload(clear_long_warning_timer)
+    schedule_long_warning()
     async def tick(_now):
         await tracker.tick()
     entry.async_on_unload(async_track_time_interval(hass, tick, timedelta(minutes=1)))

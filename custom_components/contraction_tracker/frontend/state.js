@@ -2,6 +2,11 @@
 export const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g,
   (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 export const ratings = ["Not rated", "Mild", "Moderate", "Strong"];
+export const longContractionWarning = "Timer over 2 minutes. If this contraction is still continuing, contact your midwife or maternity unit urgently. If it ended earlier, stop the timer and correct the record.";
+export function longTimerWarning(current, now = Date.now() / 1000) {
+  return current?.p === "active" && Number.isFinite(current.s) &&
+    (current.long_contraction === true || Math.floor(now) - current.s > 120);
+}
 export const average = (values) => values.length
   ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
 

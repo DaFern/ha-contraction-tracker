@@ -1,6 +1,6 @@
 """Android-first notification presentation. No external image hosts."""
 
-from .const import STATIC_URL
+from .const import LONG_CONTRACTION_WARNING, STATIC_URL
 
 
 def build_notification(view, entry_id, path, public=False, title="Contraction Tracker"):
@@ -75,4 +75,20 @@ def build_warning(view, entry_id, path, public=False):
                        "If movements reduce, stop or change, contact your midwife immediately; do not wait for a reminder.",
             "data": {"tag": f"contraction_tracker_movement_{entry_id}",
                      "channel": "Movement logging reminder", "visibility": "public" if public else "private",
-                     "clickAction": path, "priority": "high", "ttl": 0}}
+                      "clickAction": path, "priority": "high", "ttl": 0}}
+
+
+def build_long_warning(view, entry_id, path, public=False):
+    """A timer check, not a diagnosis; normal Android delivery restrictions apply."""
+    return {
+        "title": "Contraction timer over 2 minutes",
+        "message": LONG_CONTRACTION_WARNING,
+        "data": {
+            "tag": f"contraction_tracker_long_{entry_id}",
+            "channel": "Contraction timer warnings",
+            "importance": "high", "priority": "high", "ttl": 0,
+            "visibility": "public" if public else "private",
+            "clickAction": path,
+            "actions": [{"action": f"CT|{entry_id}|stop|{view['k']}", "title": "Stop"}],
+        },
+    }

@@ -1,5 +1,5 @@
 const assetQuery = new URL(import.meta.url).search;
-const { average, duration, escapeHTML: esc, findEntity, ratings,
+const { average, duration, escapeHTML: esc, findEntity, longContractionWarning, longTimerWarning, ratings,
   readCurrent, recentRows, time, trends } =
   await import(new URL(`./state.js${assetQuery}`, import.meta.url).href);
 const { hourly, localDateTime, loadRecords, sendCommand, saveCorrection, saveGuidance } =
@@ -169,7 +169,12 @@ export class ContractionTrackerAppCard extends HTMLElement {
       this._render(); // Also expires recent samples without waiting for a new contraction.
       if (this.isConnected && !this.preview) this._loadHistory();
     }
-    const c = this._current(), target = this.shadowRoot.querySelector("[data-timer]");
+    const c = this._current();
+    if (longTimerWarning(c) !== !!this._showLongWarning) {
+      this._render(); // Cross the warning threshold without waiting for a server update.
+      return;
+    }
+    const target = this.shadowRoot.querySelector("[data-timer]");
     if (!target || !c) return;
     const anchor = c.p === "active" ? c.s : c.e;
     target.textContent = anchor > 0 && c.p !== "off"
@@ -354,6 +359,7 @@ export class ContractionTrackerAppCard extends HTMLElement {
     const offline = !this._connected(), disabled = this._pending || offline || !c || this.preview || this._saveUncertain();
     const attrs = disabled ? "disabled" : "";
     const active = c?.p === "active", rate = c?.p === "rate", off = c?.p === "off";
+    this._showLongWarning = longTimerWarning(c);
     const phase = !c ? "Select an available tracker" : active ? "Contraction in progress"
       : rate ? "Contraction recorded" : off ? (c?.idle_ended ? "Recording ended after inactivity" : "Session paused")
         : c.e ? "Rest between contractions" : "Ready when you are";
@@ -441,6 +447,7 @@ export class ContractionTrackerAppCard extends HTMLElement {
       <header><button class="icon" type="button" data-menu aria-label="Open sidebar">${icon("menu")}</button>
       <div class="brand"><span>${icon("baby")}Contractions</span></div>
       <button class="icon" data-command="notify" aria-label="Refresh notification" ${attrs} ${off || (!this._config.legacy && !entity?.attributes.notifications_enabled) ? "disabled" : ""}>${icon("notification")}</button></header>
+      ${this._showLongWarning ? `<div class="error timer-warning" role="alert">${esc(longContractionWarning)}</div>` : ""}
       ${this._error || warning ? `<div class="error" role="alert">${esc(this._saveUncertain() ? warning : this._error || warning)}</div>` : ""}
       ${offline ? '<div class="error" role="status">Offline · last known state. Controls are disabled.</div>' : ""}
       <section class="hero"><div class="status"><span class="dot"></span>${phase}</div>

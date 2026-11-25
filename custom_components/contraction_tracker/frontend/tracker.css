@@ -23,6 +23,7 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font
 .record{border:1px solid #ffffff13;border-radius:12px;padding:0 11px;margin:7px 0}.record summary{font-size:12px;font-weight:450;min-height:44px}.record pre{white-space:pre-wrap;font-family:inherit;font-size:11px;line-height:1.7;color:#bdcdd7;margin:0 0 12px}
 .small{color:#cad8e1;background:#ffffff06;border:1px solid #ffffff20;border-radius:11px;padding:9px 12px;font-size:11px;cursor:pointer}.footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--muted)}.text-button{border:0;background:none;color:var(--muted);font-size:11px;cursor:pointer;min-height:44px;padding:0 3px}
 .error{border:1px solid #ffbf8b55;background:#ffbf8b0b;border-radius:12px;padding:11px;color:#ffe0c6;font-size:12px;margin-bottom:12px}
+.timer-warning{border-color:#ffaaa6;background:#ffaaa612;color:#ffe3e1}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
 @keyframes pulse{50%{opacity:.35}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 @media(min-width:600px){.app{padding:24px}}

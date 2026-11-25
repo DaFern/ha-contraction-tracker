@@ -75,9 +75,11 @@ class IdleModelTests(unittest.TestCase):
         old = completed()
         old["schema"] = 5
         old.pop("idle_ended")
+        old.pop("long_warning_attempted")
         old["movement"].pop("preferred")
         new = model.load_state(old)
         self.assertFalse(new.pop("idle_ended"))
+        self.assertFalse(new.pop("long_warning_attempted"))
         self.assertFalse(new["movement"].pop("preferred"))
         new["schema"] = 5
         self.assertEqual(new, old)

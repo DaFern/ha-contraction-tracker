@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
-import { average, duration, escapeHTML, findEntity, homePath, readCurrent, recentRows, trends }
+import { average, duration, escapeHTML, findEntity, homePath, longTimerWarning, readCurrent, recentRows, trends }
   from "../../custom_components/contraction_tracker/frontend/state.js";
 
 const registry = new Map();
@@ -140,6 +140,41 @@ test("active and rating phases have the correct controls", () => {
   const html = card({ ...state, p: "rate" }).shadowRoot.innerHTML;
   for (const rating of ["Mild", "Moderate", "Strong"]) assert.match(html, new RegExp(`data-command="${rating}"`));
   assert.doesNotMatch(html, /data-command="start"/);
+});
+test("long timer warning uses the strict two-minute boundary and clears outside active phase", () => {
+  const current = { ...state, p: "active" };
+  assert.equal(longTimerWarning(current, 1120), false);
+  assert.equal(longTimerWarning(current, 1120.99), false);
+  assert.equal(longTimerWarning(current, 1121), true);
+  assert.equal(longTimerWarning({ ...current, p: "rate" }, 1121), false);
+  assert.equal(longTimerWarning({ ...current, p: "off" }, 9000), false);
+  assert.equal(longTimerWarning({ ...current, long_contraction: true }, 1000), true);
+});
+test("running timer crosses into a visible warning without a server update or command", () => {
+  const realNow = Date.now, calls = [];
+  let now = 1120;
+  Date.now = () => now * 1000;
+  try {
+    const current = { ...state, p: "active", s: 1000 };
+    const view = card(current, true, calls);
+    assert.doesNotMatch(view.shadowRoot.innerHTML, /class="error timer-warning"/);
+    now = 1121;
+    view._tick();
+    const html = view.shadowRoot.innerHTML;
+    assert.match(html, /class="error timer-warning" role="alert"/);
+    assert.match(html, /If this contraction is still continuing/);
+    assert.match(html, /contact your midwife or maternity unit urgently/);
+    assert.match(html, /If it ended earlier, stop the timer and correct the record/);
+    const stop = html.match(/<button[^>]*data-command="stop"[^>]*>/);
+    assert.ok(stop);
+    assert.doesNotMatch(stop[0], /disabled/);
+    assert.equal(calls.length, 0);
+    assert.equal(view._current().p, "active");
+    view.hass = hass({ ...current, p: "rate", e: 1121, d: 121 });
+    assert.doesNotMatch(view.shadowRoot.innerHTML, /class="error timer-warning"/);
+  } finally {
+    Date.now = realNow;
+  }
 });
 test("idle-ended session explains closure without showing a running rest timer", () => {
   const html = card({ ...state, p: "off", idle_ended: true }).shadowRoot.innerHTML;

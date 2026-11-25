@@ -10,7 +10,7 @@ import json
 import secrets
 from uuid import uuid4
 
-from .const import MAX_RECORDS, RATINGS
+from .const import LONG_CONTRACTION_SECONDS, MAX_RECORDS, RATINGS
 from .guidance import defaults as guidance_defaults, recommendation, valid as valid_guidance
 from .location import manual as manual_location, uncertain as uncertain_location
 
@@ -30,8 +30,9 @@ def _number(value):
 def new_state():
     """Return an independent empty tracker, not a running session."""
     return {
-        "schema": 7, "p": "off", "k": secrets.token_hex(16), "session_id": "",
+        "schema": 8, "p": "off", "k": secrets.token_hex(16), "session_id": "",
         "idle_ended": False,
+        "long_warning_attempted": False,
         "s": 0, "e": 0, "i": 0, "r": 0, "n": 0, "d": 0, "v": "Not rated",
         "records": [],
         "migration": None,
@@ -79,9 +80,14 @@ def load_state(data):
         data["schema"] = 7
         # Old Off cannot distinguish a deliberate opt-out from an automatic pause.
         data["movement"]["preferred"] = data["movement"].get("enabled")
+    if isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == 7:
+        data["schema"] = 8
+        data["long_warning_attempted"] = False
     expected = set(new_state())
-    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 7:
+    if not isinstance(data, dict) or set(data) != expected or type(data.get("schema")) is not int or data["schema"] != 8:
         raise InvalidStorage("Unsupported or incomplete storage; restore a backup.")
+    if type(data["long_warning_attempted"]) is not bool:
+        raise InvalidStorage("Invalid contraction warning state.")
     if type(data["idle_ended"]) is not bool or (data["idle_ended"] and (
             data["p"] != "off" or not data["n"])):
         raise InvalidStorage("Invalid idle-session state.")
@@ -236,7 +242,7 @@ def transition(state, command, token, now):
         raise InvalidCommand("This control is out of date. Refresh the tracker.")
     result = deepcopy(state)
     if command == "show" and state["p"] == "off":
-        result.update(p="rest", idle_ended=False, session_id=uuid4().hex,
+        result.update(p="rest", idle_ended=False, long_warning_attempted=False, session_id=uuid4().hex,
                       s=0, e=0, i=0, r=0, n=0, d=0, v="Not rated")
     elif command == "start" and (state["p"] == "rest" or state["idle_ended"]):
         if len(state["records"]) >= MAX_RECORDS:
@@ -245,7 +251,8 @@ def transition(state, command, token, now):
             raise InvalidCommand("Server time moved backwards. Check time synchronization.")
         if state["idle_ended"]:
             result.update(session_id=uuid4().hex, n=0, s=0, e=0)
-        result.update(p="active", idle_ended=False, s=now, n=result["n"] + 1, d=0, v="Not rated",
+        result.update(p="active", idle_ended=False, long_warning_attempted=False,
+                      s=now, n=result["n"] + 1, d=0, v="Not rated",
                       i=now - state["s"] if result["n"] else 0,
                       r=now - state["e"] if result["n"] else 0)
     elif command == "stop" and state["p"] == "active":
@@ -286,6 +293,9 @@ def snapshot(state, now, location=None):
                          RATINGS.index(row["intensity"]) + 1 if row["intensity"] in RATINGS else 0]
                         for row in recent]
     result["records_count"] = len(state["records"])
+    result["long_contraction"] = (
+        state["p"] == "active" and now - state["s"] > LONG_CONTRACTION_SECONDS
+    )
     result["import_receipt"] = ({key: state["migration"][key] for key in
                                 ("source_sha256", "records", "sessions", "imported_at")}
                                if state["migration"] else None)
